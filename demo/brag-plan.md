@@ -21,3 +21,6 @@ One exception: the "after Gemini read the photo" screen is the real edit screen 
 | 36–40 | Outro | TrackSplit wordmark, tagline, Gemini · DevDraft · DigitalOcean · MIT |
 
 **Sound:** synthesized in C at 120 BPM (pads, bass, kick from the first cut, hats from Share, claps from Live). Tap ticks (C6), live-update blips (E6→G6), payment bells (C-E-G-C), whooshes into cuts, shutter click, stock ticks. Mixed under the music, -14 LUFS.
+
+**Narration (brag-narrated.mp4):** Kokoro `af_heart` at speed 1.1, the same setup as django_web_agent's explainer. Lines and cue times are in `film/voice.py`. The music is ducked under the voice, the mix is about -14 LUFS, and subtitles are in `brag.srt`. To rebuild, use a Python env with kokoro-onnx, soundfile and numpy at a short path (espeak cuts off long data paths), with the model files in `~/.cache/hyperframes/tts`:
+`python -I demo/film/voice.py`, then `ffmpeg -i brag.mp4 -i work/narrated.wav -map 0:v -map 1:a -c:v copy -c:a aac -b:a 192k -shortest brag-narrated.mp4`

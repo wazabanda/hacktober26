@@ -1,0 +1,35 @@
+1
+00:00:00,400 --> 00:00:02,791
+Eight friends. One bill. Who had the T-bone?
+
+2
+00:00:04,300 --> 00:00:08,294
+Snap the bill. Gemini reads every line, and checks it against the total.
+
+3
+00:00:10,200 --> 00:00:12,274
+Share one link. No app, no sign-up.
+
+4
+00:00:14,400 --> 00:00:17,672
+Everyone taps what they had, and every phone updates live.
+
+5
+00:00:19,300 --> 00:00:20,726
+Shared plates split themselves.
+
+6
+00:00:22,300 --> 00:00:26,320
+Each person pays their exact share. Mobile money, card, or USDC.
+
+7
+00:00:28,200 --> 00:00:30,140
+Money only moves when the host approves.
+
+8
+00:00:32,200 --> 00:00:35,778
+Same engine runs the shop counter. Stock updates itself.
+
+9
+00:00:36,400 --> 00:00:38,751
+TrackSplit. Everyone pays for what they ate.
