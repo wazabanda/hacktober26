@@ -1,57 +1,130 @@
 {% extends "base.html" %}
 {% block title %}Receipt #{{ r.id }}{% endblock %}
 {% block body %}
-<div class="min-h-dvh ts-glow px-4 py-8">
-  <div class="max-w-md mx-auto">
-    <div class="rounded-box bg-base-100 border border-base-300 shadow-xl shadow-base-content/5 overflow-hidden ts-in">
-      <div class="p-6 pb-5 text-center border-b border-dashed border-base-300">
-        <span class="mx-auto size-12 rounded-2xl bg-primary/12 text-primary grid place-items-center">{{ icon("receipt", "size-6") }}</span>
-        <h1 class="mt-3 text-xl font-extrabold tracking-tight">{{ r.merchant or "Receipt" }}</h1>
-        <p class="text-xs text-base-content/55 mt-1 num">#{{ r.id }} · {{ r.created_at.strftime("%d %b %Y %H:%M") }} UTC</p>
-      </div>
+<script src="/static/app.js?v={{ static_v }}"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  /* printer: dark plastic with a faint grain */
+  .pr-body{background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.09'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, #34383d, #23262a);
+    box-shadow:0 1px 0 rgb(255 255 255/.08) inset, 0 -2px 0 rgb(0 0 0/.35) inset, 0 18px 40px -12px rgb(0 0 0/.45)}
+  .pr-screen{background:#0d1512;box-shadow:inset 0 2px 6px rgb(0 0 0/.7), inset 0 0 18px rgb(43 179 143/.12)}
+  .pr-slot{background:linear-gradient(180deg,#050607,#15181b);box-shadow:inset 0 2px 3px rgb(0 0 0/.9)}
+  /* paper: cream, faint fibre texture, torn zigzag bottom edge */
+  .pr-paper{background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23p)' opacity='.05'/%3E%3C/svg%3E"),
+    #fbf8f0;color:#2b2a27;font-family:"JetBrains Mono",ui-monospace,monospace;
+    --z:7px;
+    -webkit-mask:conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) 50%/calc(2*var(--z)) 100%;
+    mask:conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) 50%/calc(2*var(--z)) 100%;
+    padding-bottom:calc(var(--z) + 1.25rem)}
+  .pr-rule{border-top:1.5px dashed #2b2a2740}
+  /* the paper waits inside the printer, then feeds out in small jerks like a thermal head */
+  .pr-feed{transform:translateY(-101%)}
+  .pr-feed.go{animation:pr-feed 1.75s steps(16, end) forwards}
+  .pr-feed.go.smooth{animation-timing-function:cubic-bezier(.45,0,.25,1)}
+  @keyframes pr-feed{from{transform:translateY(-101%)}to{transform:translateY(0)}}
+  @media (prefers-reduced-motion: reduce){.pr-feed,.pr-feed.go{transform:none;animation:none}}
+</style>
 
-      <div class="px-6 py-4">
-        <ul class="space-y-2 text-sm">
-        {% for it in items %}
-          <li class="flex justify-between gap-3">
-            <span><span class="text-base-content/55 num">{{ it.qty }}×</span> {{ it.name }}
-              {% if it.product_id and stock.get(it.product_id) %}<span class="badge badge-xs badge-ghost ml-1 num">{{ stock[it.product_id].stock_qty }} left</span>{% endif %}</span>
-            <span class="num shrink-0">{{ it.line_total_minor | k }}</span>
-          </li>
-        {% endfor %}
-        </ul>
-        <div class="mt-4 pt-3 border-t border-dashed border-base-300 text-sm space-y-1.5">
-          {% if r.tax_minor %}<div class="flex justify-between text-base-content/70"><span>Tax</span><span class="num">{{ r.tax_minor | k }}</span></div>{% endif %}
-          {% if r.service_minor %}<div class="flex justify-between text-base-content/70"><span>Service</span><span class="num">{{ r.service_minor | k }}</span></div>{% endif %}
-          {% if r.tip_minor %}<div class="flex justify-between text-base-content/70"><span>Tip</span><span class="num">{{ r.tip_minor | k }}</span></div>{% endif %}
-          <div class="flex justify-between font-extrabold text-lg pt-1"><span>Total</span><span class="num">{{ r.total_minor | k }}</span></div>
-        </div>
-      </div>
+<div class="min-h-dvh ts-glow px-4 py-8" x-data="printer({{ 'true' if pays and pays | selectattr('status', 'equalto', 'paid') | list | length == pays | length else 'false' }})" x-init="run()">
+  <div class="max-w-sm mx-auto">
 
-      {% if pays %}
-      <div class="px-6 py-4 border-t border-dashed border-base-300">
-        <h2 class="text-xs font-semibold uppercase tracking-wide text-base-content/55 mb-2">Payments</h2>
-        <ul class="text-sm space-y-2">
-          {% for p in pays %}
-          <li class="flex justify-between items-center gap-3">
-            <span class="font-medium">{{ names.get(p.participant_id, "Customer") }}</span>
-            <span class="flex items-center gap-2 num">{{ p.amount_minor | k }} <span class="text-base-content/55">· ${{ p.amount_usdc }}</span>
-              <span class="badge badge-xs {{ 'badge-success' if p.status == 'paid' else 'badge-ghost' }}">{{ p.status }}</span></span>
-          </li>
+    <!-- printer -->
+    <div class="pr-body relative z-10 rounded-[1.75rem] px-5 pt-5 pb-4 text-white">
+      <div class="flex items-center justify-between">
+        <span class="flex items-center gap-2 text-xs font-semibold tracking-[0.16em] uppercase text-white/55">
+          <span class="size-2 rounded-full transition-colors" :class="stage === 'done' ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]' : 'bg-amber-400 animate-pulse'"></span>
+          TrackSplit
+        </span>
+        <button class="text-xs font-semibold text-white/55 hover:text-white transition flex items-center gap-1 disabled:opacity-30"
+                @click="run()" :disabled="stage !== 'done'">↻ Replay</button>
+      </div>
+      <div class="pr-screen mt-3 rounded-xl px-4 py-3 h-14 flex items-center gap-3 font-[JetBrains_Mono,monospace] text-sm text-emerald-200/90" role="status" aria-live="polite">
+        <span x-show="stage !== 'done'" class="loading loading-spinner loading-sm text-emerald-300/80"></span>
+        <span x-show="stage === 'done'" x-cloak class="text-emerald-400">{{ icon("circle-check", "size-5") }}</span>
+        <span x-text="label()"></span>
+      </div>
+      <div class="pr-slot mt-4 h-2.5 rounded-full mx-3"></div>
+    </div>
+
+    <!-- paper path: hides the paper until it feeds out under the slot -->
+    <div class="relative -mt-3 mx-7 overflow-hidden pt-1 [filter:drop-shadow(0_10px_14px_rgb(0_0_0/.14))]">
+      <div class="pointer-events-none absolute inset-x-0 top-0 h-5 z-10 bg-gradient-to-b from-black/25 to-transparent"></div>
+      <div class="pr-feed" :class="{ go: stage !== 'idle', smooth: !stepped }">
+        <article class="pr-paper px-5 pt-6 text-[13px] leading-relaxed">
+          <header class="text-center">
+            <div class="text-base font-extrabold uppercase tracking-wide">{{ r.merchant or "Receipt" }}</div>
+            <div class="text-[11px] opacity-60 mt-0.5">#{{ r.id }} · {{ r.created_at.strftime("%d %b %Y %H:%M") }} UTC</div>
+          </header>
+
+          <div class="pr-rule my-4"></div>
+          <ul class="space-y-1.5">
+          {% for it in items %}
+            <li class="flex justify-between gap-3">
+              <span>{{ it.qty }}× {{ it.name }}{% if it.product_id and stock.get(it.product_id) %} <span class="opacity-50">({{ stock[it.product_id].stock_qty }} left)</span>{% endif %}</span>
+              <span class="shrink-0 tabular-nums">{{ it.line_total_minor | k }}</span>
+            </li>
           {% endfor %}
-        </ul>
-      </div>
-      {% endif %}
+          </ul>
 
-      <div class="px-6 py-5 bg-base-200/60 border-t border-dashed border-base-300 flex items-center gap-4">
-        <img src="/qr.png?data={{ url | urlencode }}" alt="QR code for this receipt" class="size-24 shrink-0 bg-white p-1 rounded-lg border border-base-300">
-        <div class="flex-1 flex flex-col gap-2">
-          <a class="btn btn-sm btn-primary gap-1" href="/r/{{ r.id }}/receipt.pdf" target="_blank">{{ icon("file-down", "size-4") }} Download PDF</a>
-          <a class="btn btn-sm gap-1 bg-base-100" href="https://wa.me/?text={{ ('Your receipt: ' ~ url) | urlencode }}" target="_blank">{{ icon("message-circle", "size-4") }} Share on WhatsApp</a>
-        </div>
+          <div class="pr-rule my-4"></div>
+          <div class="space-y-1">
+            {% if r.tax_minor %}<div class="flex justify-between opacity-75"><span>Tax</span><span class="tabular-nums">{{ r.tax_minor | k }}</span></div>{% endif %}
+            {% if r.service_minor %}<div class="flex justify-between opacity-75"><span>Service</span><span class="tabular-nums">{{ r.service_minor | k }}</span></div>{% endif %}
+            {% if r.tip_minor %}<div class="flex justify-between opacity-75"><span>Tip</span><span class="tabular-nums">{{ r.tip_minor | k }}</span></div>{% endif %}
+            <div class="flex justify-between text-base font-extrabold pt-1"><span>TOTAL</span><span class="tabular-nums">{{ r.total_minor | k }}</span></div>
+          </div>
+
+          {% if pays %}
+          <div class="pr-rule my-4"></div>
+          <ul class="space-y-1">
+            {% for p in pays %}
+            <li class="flex justify-between gap-3">
+              <span>{{ names.get(p.participant_id, "Customer") }}</span>
+              <span class="tabular-nums">{{ p.amount_minor | k }} <span class="opacity-50">${{ p.amount_usdc }}</span>
+                <span class="ml-1 font-semibold {{ 'text-emerald-700' if p.status == 'paid' else 'opacity-50' }}">{{ "PAID" if p.status == "paid" else p.status | upper }}</span></span>
+            </li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+
+          <div class="pr-rule my-4"></div>
+          <div class="flex flex-col items-center gap-2">
+            <img src="/qr.png?data={{ url | urlencode }}" alt="QR code for this receipt" class="size-24 mix-blend-multiply">
+            <div class="text-[11px] opacity-60 text-center">Thank you · Split with TrackSplit</div>
+          </div>
+        </article>
       </div>
     </div>
-    <p class="text-center text-xs text-base-content/45 mt-5">Made with TrackSplit</p>
+
+    <div class="mt-6 grid grid-cols-2 gap-2 transition duration-500" :class="stage === 'done' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'">
+      <a class="btn btn-primary gap-1" href="/r/{{ r.id }}/receipt.pdf" target="_blank">{{ icon("file-down", "size-4") }} PDF</a>
+      <a class="btn gap-1 bg-base-100" href="https://wa.me/?text={{ ('Your receipt: ' ~ url) | urlencode }}" target="_blank">{{ icon("message-circle", "size-4") }} WhatsApp</a>
+      <label class="col-span-2 flex items-center justify-center gap-2 text-xs text-base-content/55 mt-1 cursor-pointer">
+        <input type="checkbox" class="toggle toggle-xs" x-model="stepped"> Thermal-printer feed
+      </label>
+    </div>
   </div>
 </div>
+
+<script>
+function printer(paidInFull) {
+  return {
+    stage: 'idle', stepped: true, timers: [],
+    label() {
+      return { idle: 'Fetching receipt…', printing: 'Printing receipt…',
+               done: paidInFull ? 'Paid in full' : 'Receipt ready' }[this.stage];
+    },
+    run() {
+      this.timers.forEach(clearTimeout);
+      this.stage = 'idle';
+      if (calm()) { this.stage = 'done'; return; }
+      // the idle gap drops .go from the paper, so re-adding it restarts the feed on replay
+      this.timers = [setTimeout(() => (this.stage = 'printing'), 900), setTimeout(() => (this.stage = 'done'), 900 + 1750)];
+    },
+  };
+}
+</script>
 {% endblock %}
