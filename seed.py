@@ -14,6 +14,7 @@ PRODUCTS = [  # name, aliases, price (ngwee), stock
     ("Coke 500ml", "coke,coca-cola,coca cola,cocacola,coke bottle", 1500, 12),
     ("Fanta", "fanta orange,fanta 500ml", 1500, 12),
     ("Maheu", "super maheu,maheu drink", 1200, 10),
+    ("Fruticana", "frutecana,fruticana juice,fruticana 500ml", 1000, 30),
     ("Nshima & chicken", "nshima chicken,nshima with chicken", 7500, 30),
     ("Nshima & beef", "nshima beef,nshima with beef", 8000, 30),
     ("Chips", "fries,french fries,chips portion", 3500, 40),
