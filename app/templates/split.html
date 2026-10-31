@@ -2,86 +2,118 @@
 {% block title %}TrackSplit · {{ slug }}{% endblock %}
 {% block body %}
 <script src="/static/app.js?v={{ static_v }}"></script>
-<div x-data="splitPage('{{ slug }}', {{ 'true' if host else 'false' }})" x-init="init()" class="max-w-md mx-auto pb-36">
+<div x-data="splitPage('{{ slug }}', {{ 'true' if host else 'false' }})" x-init="init()" class="max-w-md mx-auto pb-44"
+     x-effect="celebrate('ts:party:{{ slug }}:' + meId, meP?.paid); celebrate('ts:party:{{ slug }}:done', host && s?.status === 'paid')">
 
-  <div class="navbar bg-base-100 shadow-sm sticky top-0 z-10">
-    <div class="flex-1 px-2">
-      <div class="font-bold text-lg" x-text="s?.merchant || 'TrackSplit'"></div>
-      <div class="text-xs opacity-60">
-        <span x-text="s ? k(s.total) + ' total' : 'loading…'"></span>
-        <span x-show="s?.demo_scale" class="badge badge-warning badge-xs ml-1">demo scale</span>
-        <span x-show="mode === 'mock'" class="badge badge-ghost badge-xs ml-1">mock pay</span>
+  <header class="sticky top-0 z-10 bg-base-200/80 backdrop-blur-md">
+    <div class="px-4 h-14 flex items-center gap-3">
+      <span class="size-8 shrink-0 rounded-xl bg-primary text-primary-content grid place-items-center">{{ icon("receipt", "size-4") }}</span>
+      <div class="flex-1 min-w-0 font-extrabold tracking-tight truncate" x-text="s?.merchant || 'TrackSplit'"></div>
+      <span x-show="mode === 'mock'" x-cloak class="badge badge-sm border-0 bg-warning/25 text-base-content/80">mock pay</span>
+      <div x-show="meP" x-cloak class="avatar avatar-placeholder" :title="meP?.name">
+        <div class="w-8 rounded-full ring-2 ring-base-100" :class="colorFor(meP?.id||0)"><span class="text-xs font-bold" x-text="initials(meP?.name)"></span></div>
       </div>
     </div>
-    <div class="flex-none pr-2 flex items-center gap-2">
-      <span class="badge" :class="{'badge-success': s?.status==='paid', 'badge-info': s?.status==='settling'}" x-text="s?.status"></span>
-      <div x-show="meP" class="avatar avatar-placeholder"><div class="w-8 rounded-full" :class="colorFor(meP?.id||0)"><span class="text-xs" x-text="initials(meP?.name)"></span></div></div>
+  </header>
+
+  <!-- the bill at a glance: who carries how much of it, live -->
+  <section class="px-4 pt-2">
+    <template x-if="!s"><div class="skeleton h-52 w-full rounded-[1.75rem]" aria-hidden="true"></div></template>
+    <div x-show="s" x-cloak class="ts-hero ts-in relative overflow-hidden rounded-[1.75rem] text-neutral-content p-5 shadow-xl shadow-neutral/20">
+      <div class="flex items-center justify-between gap-3">
+        <span class="text-[11px] font-semibold uppercase tracking-[0.16em] opacity-65">Total bill</span>
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold capitalize">
+          <span class="size-1.5 rounded-full" :class="s?.status === 'paid' ? 'bg-success' : s?.status === 'settling' ? 'bg-accent' : 'bg-white/70'"></span>
+          <span x-text="s?.status"></span>
+        </span>
+      </div>
+      <div class="mt-2 text-[2.75rem] leading-none font-extrabold tracking-tight num" x-text="s ? k(s.total) : ''"></div>
+      <div class="mt-2 text-sm opacity-70 flex items-center gap-1.5 flex-wrap">
+        <span x-text="s ? s.participants.length + (s.participants.length === 1 ? ' person' : ' people') + ' at the table' : ''"></span>
+        <span class="opacity-50">·</span><span class="num" x-text="pct(s?.claimed) + '% claimed'"></span>
+        <span class="opacity-50">·</span><span class="num" x-text="pct(s?.paid) + '% paid'"></span>
+        <span x-show="s?.demo_scale" class="badge badge-warning badge-xs">demo scale</span>
+      </div>
+
+      <div class="mt-5 flex h-3 w-full gap-0.5 overflow-hidden rounded-full bg-white/12" role="img" aria-label="How the bill is split between people">
+        <template x-for="p in s?.participants || []" :key="p.id">
+          <div x-show="p.share > 0" class="h-full transition-[width,opacity] duration-700 ease-out"
+               :class="[colorFor(p.id), p.paid ? '' : 'opacity-75']" :style="`width:${pct(p.share)}%`"></div>
+        </template>
+      </div>
+      <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
+        <template x-for="p in s?.participants || []" :key="p.id">
+          <span class="flex items-center gap-1.5">
+            <span class="size-2 rounded-full" :class="colorFor(p.id)"></span>
+            <span class="opacity-75" x-text="p.id === meId ? 'You' : p.name.split(' ')[0]"></span>
+            <span class="num font-semibold" x-text="k(p.share)"></span>
+            <span x-show="p.paid" class="text-success" aria-label="paid">{{ icon("check", "size-3.5") }}</span>
+          </span>
+        </template>
+        <span x-show="s?.unclaimed > 0" class="flex items-center gap-1.5 opacity-60">
+          <span class="size-2 rounded-full bg-white/35"></span>Unclaimed <span class="num font-semibold" x-text="k(s?.unclaimed)"></span>
+        </span>
+      </div>
     </div>
-  </div>
+  </section>
 
   {% if host %}
   <!-- host panel -->
-  <div class="p-3 space-y-3">
-    <div class="card bg-base-100 shadow-sm">
-      <div class="card-body p-4 items-center text-center">
-        <img src="/s/{{ slug }}/qr.png" alt="QR code for this split" class="w-40 h-40 rounded-box bg-white p-1">
+  <section class="px-4 pt-3 space-y-3">
+    <div class="card bg-base-100 border border-base-300">
+      <div class="card-body p-4 gap-3">
+        <div class="flex items-center gap-4">
+          <img src="/s/{{ slug }}/qr.png" alt="QR code for this split" class="size-24 shrink-0 rounded-2xl bg-white p-1.5 border border-base-300">
+          <div class="min-w-0">
+            <h2 class="font-bold flex items-center gap-1.5">{{ icon("users", "size-4 text-primary") }} Invite your table</h2>
+            <p class="text-sm text-base-content/60 mt-1">They scan this or open the link, then tap what they had.</p>
+          </div>
+        </div>
         <div class="join w-full">
-          <input class="input input-sm join-item w-full" readonly value="{{ share_url }}">
-          <button class="btn btn-sm join-item" @click="navigator.clipboard?.writeText('{{ share_url }}'); toast('Link copied', 'success')" aria-label="Copy link">{{ icon("copy", "size-4") }}</button>
-        </div>
-        <a class="link text-xs opacity-60" href="/demo?slug={{ slug }}" target="_top">Open 4-phone demo</a>
-      </div>
+          <input class="input input-sm join-item w-full text-xs" readonly value="{{ share_url }}" aria-label="Share link">
+          <button class="btn btn-sm btn-primary join-item gap-1" @click="navigator.clipboard?.writeText('{{ share_url }}'); toast('Link copied', 'success')" aria-label="Copy link">{{ icon("copy", "size-4") }} Copy</button>
+        </div>      </div>
     </div>
-    <div class="card bg-base-100 shadow-sm" x-show="s">
-      <div class="card-body p-4">
-        <div class="flex justify-around">
-          <div class="text-center">
-            <div class="radial-progress text-primary" :style="`--value:${pct(s?.claimed)}; --size:5rem`" role="progressbar" x-text="pct(s?.claimed)+'%'"></div>
-            <div class="text-xs mt-1">claimed</div>
-          </div>
-          <div class="text-center">
-            <div class="radial-progress text-success" :style="`--value:${pct(s?.paid)}; --size:5rem`" role="progressbar" x-text="pct(s?.paid)+'%'"></div>
-            <div class="text-xs mt-1">paid</div>
-          </div>
-        </div>
-        <table class="table table-sm mt-2">
-          <tbody>
-            <template x-for="p in s?.participants || []" :key="p.id">
-              <tr :class="p.paid && 'bg-success/10'">
-                <td><span x-text="p.name"></span> <span x-show="p.is_host" class="badge badge-ghost badge-xs">host</span></td>
-                <td class="text-right" x-text="k(p.share)"></td>
-                <td class="text-right">
-                  <span class="badge badge-sm" :class="p.paid ? 'badge-success' : p.confirmed ? 'badge-info' : 'badge-ghost'"
-                        x-text="p.paid ? 'paid' : p.confirmed ? 'confirmed' : 'choosing'"></span>
-                </td>
-              </tr>
-            </template>
-          </tbody>
-        </table>
-        <div x-show="s?.unclaimed > 0" class="mt-2">
-          <div class="text-sm mb-1"><span x-text="k(s?.unclaimed)"></span> not claimed yet</div>
+
+    <div class="card bg-base-100 border border-base-300" x-show="s" x-cloak>
+      <div class="card-body p-4 gap-2">
+        <h2 class="text-xs font-semibold uppercase tracking-wide text-base-content/55">At the table</h2>
+        <ul class="divide-y divide-base-300">
+          <template x-for="p in s?.participants || []" :key="p.id">
+            <li class="flex items-center gap-3 py-2.5">
+              <div class="avatar avatar-placeholder"><div class="w-8 rounded-full" :class="colorFor(p.id)"><span class="text-xs font-bold" x-text="initials(p.name)"></span></div></div>
+              <div class="flex-1 min-w-0 truncate"><span class="font-medium" x-text="p.name"></span> <span x-show="p.is_host" class="badge badge-ghost badge-xs ml-0.5">host</span></div>
+              <span class="num text-sm font-semibold" x-text="k(p.share)"></span>
+              <span class="badge badge-sm w-[5.5rem] justify-center" :class="p.paid ? 'badge-success' : p.confirmed ? 'badge-info badge-soft' : 'badge-ghost'"
+                    x-text="p.paid ? 'paid' : p.confirmed ? 'confirmed' : 'choosing'"></span>
+            </li>
+          </template>
+        </ul>
+        <div x-show="s?.unclaimed > 0" class="mt-1 rounded-2xl bg-warning/12 border border-warning/40 p-3">
+          <div class="text-sm mb-2"><b class="num" x-text="k(s?.unclaimed)"></b> not claimed yet</div>
           <div class="flex gap-2">
-            <button class="btn btn-sm btn-outline flex-1" @click="leftovers('host')">I'll take them</button>
-            <button class="btn btn-sm btn-outline flex-1" @click="leftovers('even')">Split evenly</button>
+            <button class="btn btn-sm flex-1 bg-base-100" @click="leftovers('host')">I'll take them</button>
+            <button class="btn btn-sm flex-1 bg-base-100" @click="leftovers('even')">Split evenly</button>
           </div>
         </div>
-        <div x-show="s?.payout && s.payout.status !== 'proposed'" class="alert alert-soft mt-2 text-sm"
+        <div x-show="s?.payout && s.payout.status !== 'proposed'" class="alert alert-soft text-sm mt-1"
              :class="s?.payout?.status === 'approved' ? 'alert-success' : 'alert-warning'">
-          Payout $<span x-text="s?.payout?.amount_usdc"></span>: <b x-text="s?.payout?.status"></b>
+          <span>Payout <b class="num">$<span x-text="s?.payout?.amount_usdc"></span></b>: <b x-text="s?.payout?.status"></b></span>
         </div>
       </div>
     </div>
-  </div>
+  </section>
 
   <!-- payout approval: the human-in-the-loop step for money going out -->
   <div class="modal modal-bottom sm:modal-middle" :class="{'modal-open': s?.payout?.status === 'proposed'}">
     <div class="modal-box">
-      <h3 class="text-lg font-bold">Approve payout?</h3>
-      <p class="py-3">Everyone has paid. The TrackSplit agent wants to send
-        <b>$<span x-text="s?.payout?.amount_usdc"></span> USDC</b> to your wallet.</p>
-      <p class="text-xs opacity-60">Money only leaves the account after a person approves it.</p>
+      <span class="size-12 rounded-2xl bg-success/15 text-success grid place-items-center">{{ icon("wallet", "size-6") }}</span>
+      <h3 class="text-lg font-bold mt-3">Approve payout?</h3>
+      <p class="py-2">Everyone has paid. The TrackSplit agent wants to send
+        <b class="num">$<span x-text="s?.payout?.amount_usdc"></span> USDC</b> to your wallet.</p>
+      <p class="text-xs text-base-content/60">Money only leaves the account after a person approves it.</p>
       <div class="modal-action">
-        <button class="btn" @click="payout(false)">Decline</button>
+        <button class="btn btn-ghost" @click="payout(false)">Decline</button>
         <button class="btn btn-primary" @click="payout(true)">Approve</button>
       </div>
     </div>
@@ -89,64 +121,81 @@
   {% endif %}
 
   <!-- items -->
-  <div class="p-3 space-y-2">
-    <p class="text-sm opacity-70 px-1" x-show="meP && !meP.confirmed">Tap what you had. Tap a shared plate together to split it.</p>
-    <template x-for="it in s?.items || []" :key="it.id">
-      <div class="card bg-base-100 shadow-sm">
-        <div class="card-body p-3">
-          <div class="flex justify-between items-baseline">
-            <div class="font-medium"><span x-show="it.qty > 1" x-text="it.qty + '× '"></span><span x-text="it.name"></span></div>
-            <div class="text-sm opacity-70" x-text="k(it.line_total)"></div>
+  <section class="px-4 pt-5 space-y-2.5">
+    <div class="px-1" x-show="s" x-cloak>
+      <h2 class="text-lg font-extrabold tracking-tight" x-text="meP && !meP.confirmed ? 'What did you have?' : 'The bill'"></h2>
+      <p class="text-sm text-base-content/60" x-show="meP && !meP.confirmed">Tap your plates. Tap a shared one together and it splits.</p>
+    </div>
+
+    <template x-if="!s">
+      <div class="space-y-2.5" aria-hidden="true">
+        <div class="skeleton h-28 w-full"></div><div class="skeleton h-28 w-full"></div><div class="skeleton h-28 w-full"></div>
+      </div>
+    </template>
+
+    <template x-for="(it, n) in s?.items || []" :key="it.id">
+      <div class="ts-rise card bg-base-100 border transition-[border-color,box-shadow] duration-300" :style="`--i:${n}`"
+           :class="it.units.some((u) => mine(u)) ? 'border-primary/50 shadow-lg shadow-primary/10' : 'border-base-300'">
+        <div class="card-body p-3.5 gap-3">
+          <div class="flex items-center gap-3">
+            <span class="size-11 shrink-0 rounded-2xl bg-base-200 grid place-items-center text-2xl leading-none" x-text="dish(it.name)" aria-hidden="true"></span>
+            <div class="flex-1 min-w-0">
+              <div class="font-semibold leading-snug truncate" x-text="it.name"></div>
+              <div class="text-xs text-base-content/55 num" x-show="it.qty > 1" x-text="it.qty + ' × ' + k(it.units[0]?.cost)"></div>
+            </div>
+            <div class="num font-semibold shrink-0" x-text="k(it.line_total)"></div>
           </div>
-          <div class="flex flex-wrap gap-2 mt-1">
+          <div class="flex flex-wrap gap-2">
             <template x-for="u in it.units" :key="u.index">
-              <button class="btn btn-sm rounded-full h-auto min-h-10 py-1 gap-2"
-                      :class="mine(u) ? 'btn-primary' : (u.claimers.length ? 'btn-soft' : 'btn-outline')"
+              <button class="btn btn-sm rounded-full h-auto min-h-10 py-1 pl-4 gap-2 transition-[transform,background-color,border-color] active:scale-95"
+                      :class="mine(u) ? 'btn-primary ts-pop shadow-md shadow-primary/25' : u.claimers.length ? 'bg-base-content/8 border-transparent' : 'bg-transparent border-dashed border-base-content/25 hover:border-primary hover:text-primary'"
                       :disabled="!meP || meP.confirmed || busy" @click="claim(it, u)">
-                <span x-text="it.qty > 1 ? '#' + (u.index + 1) : 'Mine'"></span>
-                <div class="avatar-group -space-x-3" x-show="u.claimers.length">
+                <span x-text="it.qty > 1 ? '#' + (u.index + 1) : (u.claimers.length && !mine(u) ? 'Share' : 'Mine')"></span>
+                <div class="avatar-group -space-x-2.5" x-show="u.claimers.length">
                   <template x-for="c in u.claimers" :key="c.id">
-                    <div class="avatar avatar-placeholder border-base-100"><div class="w-6 rounded-full" :class="colorFor(c.id)"><span class="text-[10px]" x-text="initials(c.name)"></span></div></div>
+                    <div class="avatar avatar-placeholder border-2" :class="mine(u) ? 'border-primary-content' : 'border-base-100'"><div class="w-6 rounded-full" :class="colorFor(c.id)"><span class="text-[10px] font-bold" x-text="initials(c.name)"></span></div></div>
                   </template>
                 </div>
-                <span x-show="u.claimers.length > 1" class="text-xs opacity-80" x-text="'1/' + u.claimers.length"></span>
+                <span x-show="u.claimers.length > 1" class="text-xs opacity-80 num" x-text="'1/' + u.claimers.length"></span>
               </button>
             </template>
           </div>
         </div>
       </div>
     </template>
-    <div class="text-sm opacity-70 px-1 space-y-0.5" x-show="s">
-      <div class="flex justify-between"><span>Items</span><span x-text="k(s?.subtotal)"></span></div>
-      <div class="flex justify-between"><span>Tax, service &amp; tip</span><span x-text="k(s?.extras)"></span></div>
-      <div class="flex justify-between font-bold"><span>Total</span><span x-text="k(s?.total)"></span></div>
-    </div>
-  </div>
 
-  <!-- sticky bottom bar -->
-  <div class="fixed bottom-0 inset-x-0 z-20" x-show="meP" x-cloak>
-    <div class="max-w-md mx-auto bg-base-100 border-t border-base-300 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] flex items-center gap-3 shadow-lg">
-      <div class="flex-1">
-        <div class="text-xs opacity-60">My share</div>
-        <div class="text-xl font-bold" x-text="k(meP?.share)"></div>
-        <div class="text-xs opacity-60" x-show="meP?.share">$<span x-text="meP?.share_usdc"></span> USDC</div>
+    <div class="rounded-box bg-base-100 border border-base-300 p-4 text-sm space-y-1.5" x-show="s" x-cloak>
+      <div class="flex justify-between text-base-content/70"><span>Items</span><span class="num" x-text="k(s?.subtotal)"></span></div>
+      <div class="flex justify-between text-base-content/70"><span>Tax, service &amp; tip</span><span class="num" x-text="k(s?.extras)"></span></div>
+      <div class="flex justify-between font-bold text-base border-t border-base-300 pt-2 mt-1"><span>Total</span><span class="num" x-text="k(s?.total)"></span></div>
+    </div>
+  </section>
+
+  <!-- floating share bar -->
+  <div class="fixed bottom-0 inset-x-0 z-20 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]" x-show="meP" x-cloak
+       x-transition:enter="transition duration-500 ease-out" x-transition:enter-start="translate-y-full opacity-0">
+    <div class="max-w-md mx-auto rounded-[1.75rem] bg-neutral text-neutral-content shadow-2xl shadow-black/30 p-2.5 pl-5 flex items-center gap-3">
+      <div class="flex-1 min-w-0">
+        <div class="text-[11px] font-semibold uppercase tracking-[0.16em] opacity-60">Your share</div>
+        <div class="text-2xl font-extrabold tracking-tight num leading-tight" x-effect="tween($el, meP?.share)"></div>
+        <div class="text-xs opacity-60 num" x-show="meP?.share">≈ $<span x-text="meP?.share_usdc"></span> USDC</div>
       </div>
       <template x-if="!meP?.confirmed">
-        <button class="btn btn-primary" :disabled="!meP?.share || busy" @click="confirm()">Confirm</button>
+        <button class="btn btn-primary btn-lg rounded-[1.25rem] border-0" :disabled="!meP?.share || busy" @click="confirm()">Confirm</button>
       </template>
       <template x-if="meP?.confirmed && !meP?.paid">
-        <div class="flex gap-2">
-          <button class="btn btn-ghost btn-sm" @click="unconfirm()" :disabled="busy">Change</button>
-          <a class="btn btn-success" :class="!payUrl && 'btn-disabled'" :href="payHref()" :target="isMock() ? '_self' : '_blank'">
-            Pay <span x-text="k(meP?.share)"></span>
+        <div class="flex items-center gap-1">
+          <button class="btn btn-ghost btn-sm text-neutral-content/70" @click="unconfirm()" :disabled="busy">Change</button>
+          <a class="btn btn-success btn-lg rounded-[1.25rem] border-0" :class="!payUrl && 'btn-disabled'" :href="payHref()" :target="isMock() ? '_self' : '_blank'">
+            Pay <span class="num" x-text="k(meP?.share)"></span>
           </a>
         </div>
       </template>
       <template x-if="meP?.paid">
-        <div class="flex items-center gap-2">
-          <span class="text-success">{{ icon("circle-check", "size-8") }}</span>
-          <a class="btn btn-sm gap-1" :href="'/r/' + s.receipt_id" target="_blank">{{ icon("receipt", "size-4") }} Receipt</a>
-          <a class="btn btn-sm btn-square" :href="'/r/' + s.receipt_id + '/receipt.pdf'" target="_blank" aria-label="Receipt PDF">{{ icon("file-down", "size-4") }}</a>
+        <div class="flex items-center gap-1.5">
+          <span class="text-success flex items-center gap-1 font-semibold text-sm mr-1">{{ icon("circle-check", "size-5") }} Paid</span>
+          <a class="btn btn-sm rounded-xl border-0 bg-white/10 text-neutral-content hover:bg-white/20 gap-1" :href="'/r/' + s.receipt_id" target="_blank">{{ icon("receipt", "size-4") }} Receipt</a>
+          <a class="btn btn-sm btn-square rounded-xl border-0 bg-white/10 text-neutral-content hover:bg-white/20" :href="'/r/' + s.receipt_id + '/receipt.pdf'" target="_blank" aria-label="Receipt PDF">{{ icon("file-down", "size-4") }}</a>
         </div>
       </template>
     </div>
@@ -155,17 +204,25 @@
   <!-- name modal -->
   <div class="modal modal-bottom sm:modal-middle" :class="{'modal-open': needName}">
     <div class="modal-box">
-      <h3 class="text-lg font-bold">Who are you?</h3>
-      <p class="text-sm opacity-70 py-1" x-text="s ? 'Splitting ' + (s.merchant || 'the bill') + ' with ' + s.host_name : ''"></p>
-      <form @submit.prevent="join()" class="mt-3 flex gap-2">
-        <input class="input w-full" x-model="name" placeholder="Your name" maxlength="40" autofocus required>
-        <button class="btn btn-primary" :disabled="busy">Join</button>
+      <div class="flex items-center justify-between">
+        <span class="size-12 rounded-2xl bg-primary/15 text-primary grid place-items-center">{{ icon("receipt", "size-6") }}</span>
+        <div class="avatar-group -space-x-3" x-show="s?.participants.length">
+          <template x-for="p in (s?.participants || []).slice(0, 4)" :key="p.id">
+            <div class="avatar avatar-placeholder border-base-100"><div class="w-9 rounded-full" :class="colorFor(p.id)"><span class="text-xs font-bold" x-text="initials(p.name)"></span></div></div>
+          </template>
+        </div>
+      </div>
+      <h3 class="text-xl font-extrabold tracking-tight mt-4">Who are you?</h3>
+      <p class="text-sm text-base-content/65 mt-1" x-text="s ? 'Splitting ' + (s.merchant || 'the bill') + ' with ' + s.host_name + '. Add your name, then tap what you had.' : ''"></p>
+      <form @submit.prevent="join()" class="mt-4 flex gap-2">
+        <input class="input input-lg w-full" x-model="name" placeholder="Your name" maxlength="40" autofocus required aria-label="Your name">
+        <button class="btn btn-primary btn-lg" :disabled="busy">Join</button>
       </form>
     </div>
   </div>
 
   <div class="toast toast-top toast-center z-50" x-show="msg" x-cloak x-transition>
-    <div class="alert" :class="msgKind === 'success' ? 'alert-success' : 'alert-error'"><span x-text="msg"></span></div>
+    <div class="alert shadow-lg" :class="msgKind === 'success' ? 'alert-success' : 'alert-error'"><span x-text="msg"></span></div>
   </div>
 </div>
 
@@ -183,8 +240,6 @@ function splitPage(slug, host) {
         if (r.ok) this.meId = (await r.json()).participant_id;
         else { localStorage.removeItem(key); this.token = null; }
       }
-      const d = new URLSearchParams(location.search).get('d');
-      if (d && d !== 'me') this.name = d[0].toUpperCase() + d.slice(1);
       this.needName = !this.token;
       this.conn = connectState(slug, () => this.token, (m) => {
         if (m.type === 'state') {

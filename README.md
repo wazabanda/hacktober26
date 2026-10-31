@@ -25,7 +25,6 @@ Open:
 | URL | What |
 |---|---|
 | http://localhost:8000 | Home |
-| http://localhost:8000/demo | Sample bill on 4 simulated phones (host + Alice, Bwalya, Chanda). Fastest way to see everything working. |
 | http://localhost:8000/new | Split a real bill: take a photo, check the items, create the split, share the link/QR |
 | http://localhost:8000/shop | Shop mode: snap the counter or tap + on products, then Charge or Split |
 

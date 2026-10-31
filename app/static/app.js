@@ -1,7 +1,6 @@
-// Tiny shared helpers: snapshot websocket with reconnect, JSON POST, kwacha formatting, per-iframe token key.
+// Tiny shared helpers: snapshot websocket with reconnect, JSON POST, kwacha formatting, token key.
 function tokenKey(slug, host) {
-  const d = host ? 'host' : (new URLSearchParams(location.search).get('d') || 'me');
-  return `ts:${slug}:${d}`;
+  return `ts:${slug}:${host ? 'host' : 'me'}`;
 }
 
 // Phones freeze background tabs and drop Wi-Fi sockets without firing onclose, so: ping every 10 s (server
@@ -40,3 +39,31 @@ const initials = (n) => (n || '?').trim().split(/\s+/).map((w) => w[0]).join('')
 const COLORS = ['bg-primary text-primary-content', 'bg-secondary text-secondary-content', 'bg-accent text-accent-content',
   'bg-info text-info-content', 'bg-warning text-warning-content', 'bg-error text-error-content', 'bg-neutral text-neutral-content'];
 const colorFor = (id) => COLORS[id % COLORS.length];
+
+const DISHES = [[/beer|mosi|castle|lager|cider/i, '🍺'], [/wine/i, '🍷'], [/coke|fanta|sprite|soda|juice|maheu/i, '🥤'],
+  [/water/i, '💧'], [/tea|coffee/i, '☕'], [/chips|fries/i, '🍟'], [/t-?bone|steak|beef|burger/i, '🥩'],
+  [/chicken|wings/i, '🍗'], [/fish|kapenta|bream/i, '🐟'], [/samoo?sa/i, '🥟'], [/roll|bread|bun/i, '🍞'],
+  [/pizza/i, '🍕'], [/salad|veg/i, '🥗'], [/rice/i, '🍚'], [/cake|dessert|ice ?cream/i, '🍰']];
+const dish = (name) => (DISHES.find(([re]) => re.test(name || '')) || [0, '🍽️'])[1];
+
+const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// Count a kwacha amount up/down to its new value (x-effect="tween($el, minor)").
+function tween(el, minor) {
+  const to = minor || 0, from = el._cur ?? to;
+  el._anim?.stop();
+  if (from === to || !window.Motion || calm()) { el._cur = to; el.textContent = k(to); return; }
+  el._anim = Motion.animate(from, to, {
+    duration: 0.7, ease: [0.22, 1, 0.36, 1],
+    onUpdate: (v) => { el._cur = Math.round(v); el.textContent = k(el._cur); },
+  });
+}
+
+// Confetti once per tab for a given moment (key), when `on` turns true.
+function celebrate(key, on) {
+  if (!on || !window.confetti) return;
+  try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, '1'); } catch { /* storage blocked: still celebrate */ }
+  const colors = ['#0b7a66', '#2bb38f', '#e8b931', '#c8642a', '#ffffff'];
+  confetti({ particleCount: 90, spread: 70, startVelocity: 38, origin: { y: 0.8 }, colors, disableForReducedMotion: true });
+  setTimeout(() => confetti({ particleCount: 60, spread: 110, origin: { y: 0.7 }, colors, disableForReducedMotion: true }), 250);
+}

@@ -145,21 +145,6 @@ def split_qr(request: Request, slug: str):
     return qr_png(f"{base_url(request)}/s/{slug}")
 
 
-@app.get("/demo")
-def demo(request: Request, slug: str | None = None, s: Session = Depends(get_session)):
-    host_token = None
-    if not slug:  # fresh sample bill so judges can play right away
-        biz = s.exec(select(Business)).first()
-        prods = {p.name: p for p in s.exec(select(Product)).all()}
-        picks = [("Nshima & chicken", 2), ("T-bone", 1), ("Chips", 2), ("Mosi 375ml", 3), ("Coke 500ml", 1)]
-        items = [(n, q, prods[n].price_minor * q, prods[n].id) for n, q in picks]
-        sub = sum(i[2] for i in items)
-        split, host_token = create_split(s, "Host", "host", biz.name, items, round(sub * 0.16), round(sub * 0.10),
-                                         sub + round(sub * 0.16) + round(sub * 0.10), business_id=biz.id)
-        slug = split.slug
-    return page(request, "demo.html", slug=slug, host_token=host_token)
-
-
 @app.get("/r/{receipt_id}")
 def receipt_page(request: Request, receipt_id: int, s: Session = Depends(get_session)):
     r = s.get(Receipt, receipt_id)

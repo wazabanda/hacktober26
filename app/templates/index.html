@@ -1,17 +1,56 @@
 {% extends "base.html" %}
 {% block body %}
-<div class="hero min-h-dvh">
-  <div class="hero-content text-center">
-    <div class="max-w-md">
-      <h1 class="text-5xl font-bold">TrackSplit</h1>
-      <p class="py-6">Snap a bill, share a link, everyone pays for what they ate.<br>
-        Snap the counter, the shop knows its prices and stock.</p>
-      <div class="flex flex-col gap-3">
-        <a href="/new" class="btn btn-primary btn-lg">{{ icon("receipt") }} Split a bill</a>
-        <a href="/shop" class="btn btn-outline btn-lg">{{ icon("store") }} Open my shop</a>
-      </div>
-      <p class="mt-6 text-xs opacity-60">Gemma 4 · DevDraft · DigitalOcean · MIT</p>
+<div class="min-h-dvh ts-glow flex flex-col">
+  <main class="max-w-md w-full mx-auto px-5 pt-12 pb-8 flex-1 flex flex-col">
+    <div class="flex items-center gap-2.5">
+      <span class="size-9 rounded-xl bg-primary text-primary-content grid place-items-center shadow-sm">{{ icon("receipt", "size-5") }}</span>
+      <span class="text-lg font-extrabold tracking-tight">TrackSplit</span>
     </div>
-  </div>
+
+    <h1 class="mt-12 text-[2.6rem] font-extrabold tracking-tight leading-[1.05] ts-in">
+      Everyone pays for<br><span class="text-primary">what they ate.</span>
+    </h1>
+    <p class="mt-4 text-base-content/70 leading-relaxed ts-in">
+      Snap the bill and share one link. Each friend taps their plates and pays their exact share, tax and tip included, live on every phone.
+    </p>
+
+    <div class="mt-9 grid gap-3 ts-in">
+      <a href="/new" class="group card bg-primary text-primary-content shadow-lg shadow-primary/25 transition hover:-translate-y-0.5 active:translate-y-0">
+        <div class="card-body p-5 flex-row items-center gap-4">
+          <span class="size-12 rounded-2xl bg-primary-content/15 grid place-items-center">{{ icon("receipt", "size-6") }}</span>
+          <div class="flex-1">
+            <div class="font-bold text-lg leading-tight">Split a bill</div>
+            <div class="text-sm opacity-80">Photo in, payment links out</div>
+          </div>
+          {{ icon("chevron-right", "size-5 opacity-70 transition group-hover:translate-x-0.5") }}
+        </div>
+      </a>
+      <a href="/shop" class="group card bg-base-100 border border-base-300 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 active:translate-y-0">
+        <div class="card-body p-5 flex-row items-center gap-4">
+          <span class="size-12 rounded-2xl bg-secondary/12 text-secondary grid place-items-center">{{ icon("store", "size-6") }}</span>
+          <div class="flex-1">
+            <div class="font-bold text-lg leading-tight">Open my shop</div>
+            <div class="text-sm text-base-content/60">Snap the counter, charge, track stock</div>
+          </div>
+          {{ icon("chevron-right", "size-5 text-base-content/40 transition group-hover:translate-x-0.5") }}
+        </div>
+      </a>
+    </div>
+
+    <ol class="mt-10 space-y-4">
+      {% for title, desc in [("Snap the bill", "Gemma reads every line. You check it before anyone sees it."),
+                             ("Share the link", "Friends tap what they had. Shared plates split themselves."),
+                             ("Everyone pays", "Exact shares through DevDraft, settled live.")] %}
+      <li class="flex gap-3.5">
+        <span class="size-7 shrink-0 rounded-full bg-base-100 border border-base-300 text-primary text-sm font-bold grid place-items-center num">{{ loop.index }}</span>
+        <div>
+          <div class="font-semibold leading-tight">{{ title }}</div>
+          <div class="text-sm text-base-content/60 mt-0.5">{{ desc }}</div>
+        </div>
+      </li>
+      {% endfor %}
+    </ol>
+  </main>
+  <footer class="text-center text-xs text-base-content/45 pb-6">Gemma 4 · DevDraft · DigitalOcean · MIT</footer>
 </div>
 {% endblock %}

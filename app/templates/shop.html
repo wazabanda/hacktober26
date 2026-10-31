@@ -4,96 +4,127 @@
 <script src="/static/app.js?v={{ static_v }}"></script>
 <div x-data="shop()" x-init="load()" class="drawer drawer-end">
   <input id="cart" type="checkbox" class="drawer-toggle" x-model="open">
-  <div class="drawer-content max-w-md mx-auto p-3 pb-24 space-y-3">
-    <div class="flex items-center gap-2"><a href="/" class="btn btn-ghost btn-sm btn-square" aria-label="Back">{{ icon("arrow-left") }}</a><h1 class="text-xl font-bold">{{ biz.name }}</h1></div>
+  <div class="drawer-content max-w-md mx-auto px-4 pt-3 pb-28 space-y-4">
+    <div class="flex items-center gap-2 -ml-2">
+      <a href="/" class="btn btn-ghost btn-sm btn-square" aria-label="Back">{{ icon("arrow-left") }}</a>
+      <h1 class="text-xl font-extrabold tracking-tight truncate">{{ biz.name }}</h1>
+      <span class="badge badge-sm ml-auto border-0 text-base-content/80 {{ 'bg-warning/25' if mode == 'mock' else 'bg-success/20' }}">DevDraft {{ mode }}</span>
+    </div>
 
-    <div class="stats bg-base-100 shadow-sm w-full">
-      {% for w in wallets[:1] %}
-      <div class="stat py-3">
-        <div class="stat-figure text-primary">{{ icon("wallet", "size-7") }}</div>
-        <div class="stat-title">{{ w.name or w.id or "Wallet" }}</div>
-        <div class="stat-value text-2xl">${{ w.balance or w.availableBalance or "—" }}</div>
-        <div class="stat-desc">{{ w.currency or "USDC" }} · DevDraft {{ mode }}</div>
+    <div class="ts-hero ts-in relative overflow-hidden rounded-[1.75rem] text-neutral-content p-5 shadow-xl shadow-neutral/20">
+      {% set w = wallets[0] if wallets else {} %}
+      <div class="flex items-center justify-between gap-3">
+        <span class="text-[11px] font-semibold uppercase tracking-[0.16em] opacity-65 truncate">{{ w.name or w.id or "Wallet" }}</span>
+        <span class="size-8 rounded-xl bg-white/10 grid place-items-center">{{ icon("wallet", "size-4") }}</span>
       </div>
-      {% else %}
-      <div class="stat py-3"><div class="stat-title">Wallet</div><div class="stat-value text-2xl">—</div><div class="stat-desc">DevDraft {{ mode }}</div></div>
-      {% endfor %}
-      <div class="stat py-3">
-        <div class="stat-title">Low stock</div>
-        <div class="stat-value text-2xl" x-text="low().length"></div>
-        <div class="stat-desc truncate" x-text="low().map(p => p.name + ': ' + p.stock_qty + ' left').join(', ') || 'all good'"></div>
+      <div class="mt-1 flex items-baseline gap-2">
+        <span class="text-[2.75rem] leading-none font-extrabold tracking-tight num">${{ w.balance or w.availableBalance or "0" }}</span>
+        <span class="text-sm opacity-60">{{ w.currency or "USDC" }}</span>
       </div>
+      <div class="mt-5 grid grid-cols-3 gap-2 text-center">
+        <div class="rounded-2xl bg-white/8 py-2.5">
+          <div class="text-lg font-extrabold num" x-text="products.length"></div>
+          <div class="text-[11px] opacity-60">products</div>
+        </div>
+        <div class="rounded-2xl bg-white/8 py-2.5">
+          <div class="text-lg font-extrabold num" x-text="products.reduce((a, p) => a + p.stock_qty, 0)"></div>
+          <div class="text-[11px] opacity-60">units in stock</div>
+        </div>
+        <div class="rounded-2xl py-2.5" :class="low().length ? 'bg-error/25' : 'bg-white/8'">
+          <div class="text-lg font-extrabold num" x-text="low().length"></div>
+          <div class="text-[11px] opacity-60">low stock</div>
+        </div>
+      </div>
+      <div class="mt-3 text-xs opacity-70 truncate" x-show="low().length" x-text="'Running low: ' + low().map(p => p.name + ' (' + p.stock_qty + ')').join(', ')"></div>
     </div>
 
     <div class="flex gap-2">
-      <label class="btn btn-primary btn-lg flex-1" :class="loading && 'btn-disabled'">
+      <label class="btn btn-primary btn-lg flex-1 shadow-lg shadow-primary/25" :class="loading && 'btn-disabled'">
         <span x-show="!loading" class="flex items-center gap-2">{{ icon("camera") }} Snap counter</span>
-        <span x-show="loading" class="flex items-center gap-2"><span class="loading loading-spinner"></span>Reading photo…</span>
+        <span x-show="loading" x-cloak class="flex items-center gap-2"><span class="loading loading-spinner"></span>Reading photo…</span>
         <input type="file" accept="image/*" capture="environment" class="hidden" @change="snap($event)" :disabled="loading">
       </label>
-      <label class="btn btn-outline btn-lg btn-square" :class="loading && 'btn-disabled'" aria-label="Choose from gallery">
+      <label class="btn btn-lg btn-square bg-base-100 border-base-300" :class="loading && 'btn-disabled'" aria-label="Choose from gallery">
         {{ icon("image") }}
         <input type="file" accept="image/*" class="hidden" @change="snap($event)" :disabled="loading">
       </label>
     </div>
 
-    <div class="card bg-base-100 shadow-sm">
-      <table class="table table-sm">
-        <thead><tr><th>Product</th><th class="text-right">Price</th><th class="text-right">Stock</th><th></th></tr></thead>
-        <tbody>
-          <template x-for="p in products" :key="p.id">
-            <tr>
-              <td x-text="p.name"></td>
-              <td class="text-right" x-text="k(p.price_minor)"></td>
-              <td class="text-right"><span class="badge badge-sm" :class="p.stock_qty <= threshold ? 'badge-error' : 'badge-ghost'" x-text="p.stock_qty"></span></td>
-              <td class="text-right"><button class="btn btn-xs btn-ghost" @click="add(p.id, 1)" :aria-label="'Add ' + p.name">{{ icon("plus", "size-4") }}</button></td>
-            </tr>
-          </template>
-        </tbody>
-      </table>
-    </div>
+    <section>
+      <h2 class="text-xs font-semibold uppercase tracking-wide text-base-content/55 px-1 mb-2">Products</h2>
+      <div class="rounded-box bg-base-100 border border-base-300 divide-y divide-base-300 overflow-hidden">
+        <template x-if="!products.length">
+          <div class="p-3 space-y-3" aria-hidden="true"><div class="skeleton h-5 w-3/4"></div><div class="skeleton h-5 w-2/3"></div><div class="skeleton h-5 w-4/5"></div></div>
+        </template>
+        <template x-for="p in products" :key="p.id">
+          <div class="flex items-center gap-3 px-3.5 py-2.5">
+            <span class="size-10 shrink-0 rounded-xl bg-base-200 grid place-items-center text-xl leading-none" x-text="dish(p.name)" aria-hidden="true"></span>
+            <div class="flex-1 min-w-0">
+              <div class="font-medium truncate" x-text="p.name"></div>
+              <div class="text-xs text-base-content/60 num" x-text="k(p.price_minor)"></div>
+            </div>
+            <span class="badge badge-sm num" :class="p.stock_qty <= threshold ? 'badge-error badge-soft' : 'badge-ghost'" x-text="p.stock_qty + ' in stock'"></span>
+            <button class="btn btn-sm btn-circle btn-soft btn-primary" @click="add(p.id, 1)" :aria-label="'Add ' + p.name">{{ icon("plus", "size-4") }}</button>
+          </div>
+        </template>
+      </div>
+    </section>
 
-    <button class="btn btn-neutral fixed bottom-4 right-4 shadow-lg" x-show="cart.length" @click="open = true">
-      {{ icon("shopping-cart") }} Cart <span class="badge" x-text="cart.reduce((a, l) => a + (l.product_id ? l.qty : 0), 0)"></span>
-    </button>
+    <div class="fixed bottom-0 inset-x-0 z-20 pointer-events-none" x-show="cart.length" x-cloak x-transition>
+      <div class="max-w-md mx-auto px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <button class="pointer-events-auto w-full rounded-[1.75rem] bg-neutral text-neutral-content shadow-2xl shadow-black/30 p-2.5 pl-5 flex items-center gap-3 text-left transition active:scale-[.98]" @click="open = true">
+          <span class="flex-1">
+            <span class="block text-[11px] font-semibold uppercase tracking-[0.16em] opacity-60"
+                  x-text="cart.reduce((a, l) => a + (l.product_id ? l.qty : 0), 0) + ' in cart'"></span>
+            <span class="block text-2xl font-extrabold tracking-tight num leading-tight" x-effect="tween($el, total())"></span>
+          </span>
+          <span class="btn btn-primary btn-lg rounded-[1.25rem] border-0 pointer-events-none">{{ icon("shopping-cart") }} View</span>
+        </button>
+      </div>
+    </div>
   </div>
 
   <div class="drawer-side z-30">
     <label for="cart" class="drawer-overlay" aria-label="Close cart"></label>
     <div class="bg-base-100 min-h-full w-80 max-w-[90vw] p-4 flex flex-col gap-3">
-      <h2 class="text-lg font-bold">Cart</h2>
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-extrabold tracking-tight">Cart</h2>
+        <label for="cart" class="btn btn-ghost btn-sm btn-square" aria-label="Close cart">{{ icon("x", "size-4") }}</label>
+      </div>
       <template x-for="(l, i) in cart" :key="i">
-        <div class="rounded-box p-2" :class="l.product_id ? 'bg-base-200' : 'bg-warning/20 border border-warning'">
-          <div class="text-xs opacity-60" x-show="l.label" x-text="'Gemma saw: ' + l.label + (l.confidence != null ? ' (' + Math.round(l.confidence * 100) + '%)' : '')"></div>
+        <div class="rounded-field p-2.5 border" :class="l.product_id ? 'bg-base-200 border-transparent' : 'bg-warning/12 border-warning/50'">
+          <div class="text-xs text-base-content/60" x-show="l.label" x-text="'Gemma saw: ' + l.label + (l.confidence != null ? ' (' + Math.round(l.confidence * 100) + '%)' : '')"></div>
           <div class="flex gap-2 items-center mt-1">
-            <select class="select select-sm flex-1" x-model.number="l.product_id">
+            <select class="select select-sm flex-1" x-model.number="l.product_id" aria-label="Product">
               <option :value="null">— not matched —</option>
               <template x-for="p in products" :key="p.id"><option :value="p.id" x-text="p.name" :selected="p.id === l.product_id"></option></template>
             </select>
-            <input type="number" min="0" class="input input-sm w-14 text-center" x-model.number="l.qty">
+            <input type="number" min="0" class="input input-sm w-14 text-center num" x-model.number="l.qty" aria-label="Quantity">
           </div>
-          <div class="text-right text-sm mt-1" x-show="l.product_id" x-text="k(price(l.product_id) * l.qty)"></div>
+          <div class="text-right text-sm font-medium mt-1 num" x-show="l.product_id" x-text="k(price(l.product_id) * l.qty)"></div>
         </div>
       </template>
-      <div class="flex justify-between font-bold text-lg"><span>Total</span><span x-text="k(total())"></span></div>
-      <div class="alert alert-error alert-soft text-sm" x-show="error"><span x-text="error"></span></div>
+      <div class="flex justify-between font-extrabold text-lg border-t border-base-300 pt-3"><span>Total</span><span class="num" x-text="k(total())"></span></div>
+      <div role="alert" class="alert alert-error alert-soft text-sm" x-show="error"><span x-text="error"></span></div>
 
       <template x-if="!charge">
         <div class="flex flex-col gap-2">
-          <button class="btn btn-primary" :disabled="busy || !total()" @click="doCharge()">Charge</button>
-          <button class="btn btn-outline" :disabled="busy || !total()" @click="doSplit()">Split this</button>
-          <button class="btn btn-ghost btn-sm" @click="cart = []; open = false">Clear</button>
+          <button class="btn btn-primary btn-lg" :disabled="busy || !total()" @click="doCharge()">Charge</button>
+          <button class="btn btn-outline" :disabled="busy || !total()" @click="doSplit()">{{ icon("users", "size-4") }} Split this</button>
+          <button class="btn btn-ghost btn-sm text-base-content/60" @click="cart = []; open = false">Clear</button>
         </div>
       </template>
       <template x-if="charge">
-        <div class="flex flex-col items-center gap-2 text-center">
-          <img :src="'/qr.png?data=' + encodeURIComponent(charge.url)" alt="Payment QR code" class="w-48 h-48 bg-white p-1 rounded">
-          <div><b x-text="charge.total"></b> · $<span x-text="charge.amount_usdc"></span> USDC</div>
-          <a class="link text-sm" :href="charge.url" target="_blank">Open payment link</a>
-          <div x-show="!paid" class="flex items-center gap-2 text-sm"><span class="loading loading-ring"></span>Waiting for payment…</div>
+        <div class="flex flex-col items-center gap-2.5 text-center">
+          <img :src="'/qr.png?data=' + encodeURIComponent(charge.url)" alt="Payment QR code" class="w-48 h-48 bg-white p-1.5 rounded-xl border border-base-300">
+          <div class="num"><b class="text-lg" x-text="charge.total"></b> <span class="text-base-content/60">· $<span x-text="charge.amount_usdc"></span> USDC</span></div>
+          <a class="link link-primary text-sm" :href="charge.url" target="_blank">Open payment link</a>
+          <div x-show="!paid" class="flex items-center gap-2 text-sm text-base-content/70"><span class="loading loading-ring text-primary"></span>Waiting for payment…</div>
           <div x-show="paid" class="alert alert-success">{{ icon("circle-check") }}<span>Paid. Stock updated.</span></div>
-          <a x-show="paid" class="btn btn-sm gap-1" :href="'/r/' + charge.receipt_id">{{ icon("receipt", "size-4") }} Receipt</a>
-          <a x-show="paid" class="btn btn-sm gap-1" :href="'/r/' + charge.receipt_id + '/receipt.pdf'" target="_blank">{{ icon("file-down", "size-4") }} PDF</a>
+          <div x-show="paid" class="flex gap-2">
+            <a class="btn btn-sm gap-1" :href="'/r/' + charge.receipt_id">{{ icon("receipt", "size-4") }} Receipt</a>
+            <a class="btn btn-sm gap-1" :href="'/r/' + charge.receipt_id + '/receipt.pdf'" target="_blank">{{ icon("file-down", "size-4") }} PDF</a>
+          </div>
           <button class="btn btn-ghost btn-sm" @click="reset()">New sale</button>
         </div>
       </template>
