@@ -4,17 +4,28 @@ function tokenKey(slug, host) {
   return `ts:${slug}:${d}`;
 }
 
+// Phones freeze background tabs and drop Wi-Fi sockets without firing onclose, so: ping every 10 s (server
+// answers "pong"), reconnect if nothing arrived for 25 s, and reconnect whenever the page comes back to the front.
+// Every (re)connect starts with a full snapshot, so nothing is lost.
 function connectState(slug, getToken, onMsg) {
-  let ws, ping;
+  let ws, last = Date.now();
   const open = () => {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
     ws = new WebSocket(`${proto}://${location.host}/ws/splits/${slug}?token=${encodeURIComponent(getToken() || '')}`);
-    ws.onmessage = (e) => onMsg(JSON.parse(e.data));
-    ws.onopen = () => { ping = setInterval(() => ws.readyState === 1 && ws.send('ping'), 25000); };
-    ws.onclose = () => { clearInterval(ping); setTimeout(open, 2000); };
+    last = Date.now();
+    ws.onmessage = (e) => { last = Date.now(); if (e.data !== 'pong') onMsg(JSON.parse(e.data)); };
+    ws.onclose = () => setTimeout(() => ws.readyState === 3 && open(), 2000);
   };
+  const reconnect = () => { ws.onclose = null; try { ws.close(); } catch {} open(); };
+  setInterval(() => {
+    if (ws.readyState === 1) ws.send('ping');
+    if (Date.now() - last > 25000) reconnect();
+  }, 10000);
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && reconnect());
+  addEventListener('online', reconnect);
+  addEventListener('pageshow', (e) => e.persisted && reconnect());
   open();
-  return { reconnect() { ws.onclose = null; clearInterval(ping); ws.close(); open(); } };
+  return { reconnect };
 }
 
 async function post(url, body) {

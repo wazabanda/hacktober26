@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}TrackSplit · {{ slug }}{% endblock %}
 {% block body %}
-<script src="/static/app.js"></script>
+<script src="/static/app.js?v={{ static_v }}"></script>
 <div x-data="splitPage('{{ slug }}', {{ 'true' if host else 'false' }})" x-init="init()" class="max-w-md mx-auto pb-36">
 
   <div class="navbar bg-base-100 shadow-sm sticky top-0 z-10">

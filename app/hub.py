@@ -1,5 +1,7 @@
 """In-memory WebSocket rooms. ponytail: one process only; swap for Redis pub/sub to scale out."""
 
+import asyncio
+import logging
 import os
 
 from fastapi import WebSocket
@@ -9,6 +11,7 @@ from .db import Claim, Participant, Payment, Payout, Receipt, ReceiptItem, Split
 from .schemas import Claimer, ItemState, ParticipantState, SplitState, UnitState
 from .split import UNCLAIMED, shares, to_usdc, unit_costs
 
+log = logging.getLogger("hub")
 rooms: dict[str, dict[WebSocket, int | None]] = {}  # slug -> {socket: participant_id}
 
 
@@ -83,9 +86,11 @@ async def broadcast_state(slug: str):
             if pid not in cache:
                 cache[pid] = {"type": "state", "split": build_state(s, split, pid).model_dump(mode="json")}
             try:
-                await ws.send_json(cache[pid])
-            except Exception:
+                await asyncio.wait_for(ws.send_json(cache[pid]), 5)
+            except Exception as e:  # dead phone socket: drop it, the client reconnects and gets a fresh snapshot
+                log.warning("broadcast %s to participant %s failed: %r", slug, pid, e)
                 leave(slug, ws)
+        log.info("broadcast %s to %d sockets", slug, len(room))
 
 
 async def send_to(slug: str, participant_id: int, msg: dict):

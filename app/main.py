@@ -67,6 +67,7 @@ app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
 templates = Jinja2Templates(directory=HERE / "templates")
 templates.env.filters["k"] = kwacha
 templates.env.globals["icon"] = icon
+templates.env.globals["static_v"] = int((HERE / "static" / "app.js").stat().st_mtime)  # cache-bust on change
 
 
 def page(request: Request, name: str, **ctx):
@@ -461,7 +462,8 @@ async def ws_split(ws: WebSocket, slug: str, token: str = ""):
         await ws.send_json({"type": "state", "split": hub.build_state(s, split, p.id if p else None).model_dump(mode="json")})
     try:
         while True:
-            await ws.receive_text()  # client pings only
+            if await ws.receive_text() == "ping":
+                await ws.send_text("pong")
     except WebSocketDisconnect:
         pass
     finally:

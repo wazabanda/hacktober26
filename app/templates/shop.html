@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}TrackSplit · {{ biz.name }}{% endblock %}
 {% block body %}
-<script src="/static/app.js"></script>
+<script src="/static/app.js?v={{ static_v }}"></script>
 <div x-data="shop()" x-init="load()" class="drawer drawer-end">
   <input id="cart" type="checkbox" class="drawer-toggle" x-model="open">
   <div class="drawer-content max-w-md mx-auto p-3 pb-24 space-y-3">

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}TrackSplit · New split{% endblock %}
 {% block body %}
-<script src="/static/app.js"></script>
+<script src="/static/app.js?v={{ static_v }}"></script>
 <div x-data="newSplit()" class="max-w-md mx-auto p-3 pb-28 space-y-3">
   <div class="flex items-center gap-2"><a href="/" class="btn btn-ghost btn-sm btn-square" aria-label="Back">{{ icon("arrow-left") }}</a><h1 class="text-xl font-bold">Split a bill</h1></div>
 
