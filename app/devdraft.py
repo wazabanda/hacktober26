@@ -51,10 +51,11 @@ def pick_url(data: dict) -> str | None:
     return None
 
 
-def create_payment_link(s: Session, pay: Payment, title: str, description: str, slug: str) -> tuple[str, str]:
+def create_payment_link(s: Session, pay: Payment, title: str, description: str, slug: str,
+                        base_url: str) -> tuple[str, str]:
     amount = Decimal(pay.amount_usdc)
     if mode() == "mock":
-        return f"mock_{pay.id}", f"{os.getenv('PUBLIC_BASE_URL', '')}/mock-pay/{pay.id}"
+        return f"mock_{pay.id}", f"{base_url}/mock-pay/{pay.id}"
     spent = sum((Decimal(p.amount_usdc) for p in s.exec(select(Payment).where(
         Payment.status.in_(["pending", "paid"]), Payment.id != pay.id)).all()
         if p.devdraft_link_id and not p.devdraft_link_id.startswith("mock_")), Decimal(0))

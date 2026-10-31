@@ -350,7 +350,7 @@ async def claim(slug: str, body: ClaimIn, s: Session = Depends(get_session)):
 
 
 @app.post("/api/splits/{slug}/confirm")
-async def confirm(slug: str, body: TokenIn, s: Session = Depends(get_session)):
+async def confirm(request: Request, slug: str, body: TokenIn, s: Session = Depends(get_session)):
     split = get_split(s, slug)
     p = get_person(s, split, body.token)
     if p.confirmed:
@@ -373,7 +373,7 @@ async def confirm(slug: str, body: TokenIn, s: Session = Depends(get_session)):
         try:
             pay.devdraft_link_id, pay.url = devdraft.create_payment_link(
                 s, pay, f"TrackSplit: {p.name} @ {receipt.merchant or 'the table'}",
-                f"Your share {kwacha(share)}: " + ", ".join(mine), slug)
+                f"Your share {kwacha(share)}: " + ", ".join(mine), slug, base_url(request))
         except Exception as e:
             s.rollback()
             log.warning("payment link failed: %s", e)
@@ -529,7 +529,7 @@ def cart_receipt_items(s: Session, body: CartIn):
 
 
 @app.post("/api/shop/charge")
-async def shop_charge(body: CartIn, s: Session = Depends(get_session)):
+async def shop_charge(request: Request, body: CartIn, s: Session = Depends(get_session)):
     cart = cart_receipt_items(s, body)
     biz = s.exec(select(Business)).first()
     r = Receipt(business_id=biz.id, source="counter", merchant=biz.name, subtotal_minor=cart.total_minor,
@@ -543,7 +543,7 @@ async def shop_charge(body: CartIn, s: Session = Depends(get_session)):
     s.flush()
     try:
         pay.devdraft_link_id, pay.url = devdraft.create_payment_link(
-            s, pay, f"{biz.name} sale #{r.id}", ", ".join(f"{line.qty}x {line.name}" for line in cart.lines), "shop")
+            s, pay, f"{biz.name} sale #{r.id}", ", ".join(f"{line.qty}x {line.name}" for line in cart.lines), "shop", base_url(request))
     except Exception as e:
         s.rollback()
         raise HTTPException(502, f"Payment link failed: {e}")
