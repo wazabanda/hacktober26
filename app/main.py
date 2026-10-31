@@ -15,7 +15,7 @@ load_dotenv()
 import qrcode
 from fastapi import Depends, FastAPI, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.exception_handlers import http_exception_handler
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
@@ -191,15 +191,39 @@ def mock_pay_page(request: Request, payment_id: int, back: str = "", s: Session 
     pay = s.get(Payment, payment_id)
     if not pay:
         raise HTTPException(404)
-    return page(request, "mock_pay.html", pay=pay, back=back)
+    receipt = s.get(Receipt, pay.receipt_id)
+    who = s.get(Participant, pay.participant_id) if pay.participant_id else None
+    return page(request, "mock_pay.html", pay=pay, back=back if back.startswith("/") else "",
+                merchant=receipt.merchant or "TrackSplit", who=who.name if who else None)
+
+
+class MockPayIn(BaseModel):
+    method: str  # card | momo | wallet
+    ref: str = ""  # masked card / phone / wallet, built in the browser
+
+
+MOCK_DECLINES = {  # demo test cases, shown on the checkout page
+    ("card", "0002"): "Card declined by the issuer",
+    ("momo", "000"): "Insufficient mobile money balance",
+}
 
 
 @app.post("/mock-pay/{payment_id}")
-async def mock_pay(payment_id: int, back: str = ""):
+async def mock_pay(payment_id: int, body: MockPayIn, s: Session = Depends(get_session)):
     if devdraft.mode() != "mock":
-        raise HTTPException(403, "mock payments are off")
-    await devdraft.mark_paid(payment_id)
-    return RedirectResponse(back if back.startswith("/") else f"/mock-pay/{payment_id}", status_code=303)
+        raise HTTPException(403, "Mock payments are off")
+    pay = s.get(Payment, payment_id)
+    if not pay or pay.status not in ("pending", "paid"):
+        raise HTTPException(404, "This payment link is no longer valid")
+    if body.method not in ("card", "momo", "wallet"):
+        raise HTTPException(400, "Unknown payment method")
+    ref = body.ref.strip()[:40]
+    for (method, ending), reason in MOCK_DECLINES.items():
+        if body.method == method and ref.endswith(ending):
+            raise HTTPException(402, reason)
+    await asyncio.sleep(1.2)  # feels like a real processor round-trip
+    await devdraft.mark_paid(payment_id, body.method, ref)
+    return {"ok": True}
 
 
 @app.get("/shop")

@@ -15,7 +15,7 @@
     <label class="group block cursor-pointer rounded-box border-2 border-dashed border-primary/35 bg-base-100 hover:border-primary hover:bg-primary/5 transition p-7 text-center">
       <span class="mx-auto size-16 rounded-2xl bg-primary text-primary-content grid place-items-center shadow-lg shadow-primary/25 transition group-hover:scale-105">{{ icon("camera", "size-7") }}</span>
       <span class="block mt-4 font-bold text-lg">Take a photo of the bill</span>
-      <span class="block mt-1 text-sm text-base-content/60">Gemma reads every line. You check it before anyone sees it.</span>
+      <span class="block mt-1 text-sm text-base-content/60">Gemini reads every line. You check it before anyone sees it.</span>
       <input type="file" accept="image/*" capture="environment" class="hidden" @change="upload($event)">
     </label>
     <label class="btn btn-outline btn-block gap-2 bg-base-100">
@@ -134,7 +134,7 @@
 
 <script>
 async function shrink(file, max = 1600) {
-  // Phones shoot 4000px photos; Gemma reads 1600px fine and it uploads fast.
+  // Phones shoot 4000px photos; Gemini reads 1600px fine and it uploads fast.
   try {
     const img = await createImageBitmap(file);
     const scale = Math.min(1, max / Math.max(img.width, img.height));

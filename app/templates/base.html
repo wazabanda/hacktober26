@@ -101,9 +101,9 @@
     .ts-hero::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
       box-shadow:inset 0 1px 0 rgb(255 255 255/.12)}
     @keyframes ts-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-    .ts-in{animation:ts-in .3s ease-out both}
+    .ts-in{animation:ts-in .3s ease-out backwards}  /* backwards, not both: a lingering transform traps position:fixed children */
     /* list items rise in one after another; set --i on each */
-    .ts-rise{animation:ts-in .45s cubic-bezier(.22,1,.36,1) both;animation-delay:calc(var(--i,0) * 60ms)}
+    .ts-rise{animation:ts-in .45s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(var(--i,0) * 60ms)}
     /* re-runs whenever the class is (re)applied, e.g. a chip becoming "mine" */
     @keyframes ts-pop{0%{transform:scale(.9)}55%{transform:scale(1.07)}100%{transform:scale(1)}}
     .ts-pop{animation:ts-pop .32s cubic-bezier(.22,1,.36,1)}

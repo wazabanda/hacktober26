@@ -1,0 +1,1 @@
+One bill, four phones, zero WhatsApp reminders. TrackSplit reads the bill with Gemini, everyone taps what they ate, and each person pays their exact share (mobile money, card or USDC via DevDraft), live on every phone. Same engine runs a shop counter: snap the items, stock updates itself. Open source, MIT.

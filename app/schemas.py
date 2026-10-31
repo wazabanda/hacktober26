@@ -61,6 +61,7 @@ class ParticipantState(BaseModel):
     paid: bool
     share: int
     share_usdc: str
+    paid_with: str | None = None  # masked payer reference once paid
     pay_url: str | None = None  # only filled on the owner's own socket
 
 

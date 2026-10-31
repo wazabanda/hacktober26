@@ -1,4 +1,4 @@
-"""Gemma 4 does the reading. Everything here only extracts; money math lives in split.py / shop.py."""
+"""Gemini does the reading. Everything here only extracts; money math lives in split.py / shop.py."""
 
 import os
 import sys
@@ -15,7 +15,7 @@ from .schemas import CounterExtract, ReceiptExtract
 
 @cache
 def get_model(env_key: str = "LLM_MODEL"):
-    """Bare id (e.g. gemma-4-...) -> Gemini API. "provider:model" (e.g. deepseek:deepseek-chat) -> pydantic-ai infers it."""
+    """Bare id (e.g. gemini-2.5-flash) -> Gemini API. "provider:model" (e.g. deepseek:deepseek-chat) -> pydantic-ai infers it."""
     name = os.getenv(env_key) or os.environ["LLM_MODEL"]
     if ":" in name:
         return infer_model(name)

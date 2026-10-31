@@ -11,6 +11,24 @@
         ],
         "createdAt": "2026-10-31T10:34:00.362Z",
         "reason": "agent: img uses Alpine :src binding, set at runtime"
+      },
+      {
+        "rule": "dark-glow",
+        "value": "*",
+        "files": [
+          "demo/film/compose.html"
+        ],
+        "createdAt": "2026-10-31T13:32:56.677Z",
+        "reason": "agent: scanner-beam glow in the demo film is an intentional motion effect, not UI"
+      },
+      {
+        "rule": "overused-font",
+        "value": "plus jakarta sans",
+        "files": [
+          "demo/film/compose.html"
+        ],
+        "createdAt": "2026-10-31T14:00:00.000Z",
+        "reason": "agent: film must match the app's brand font (base.html theme)"
       }
     ]
   }

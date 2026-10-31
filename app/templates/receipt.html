@@ -89,7 +89,8 @@
           <ul class="space-y-1">
             {% for p in pays %}
             <li class="flex justify-between gap-3">
-              <span>{{ names.get(p.participant_id, "Customer") }}</span>
+              <span class="min-w-0">{{ names.get(p.participant_id, "Customer") }}
+                {% if p.payer_ref %}<span class="block text-[0.7rem] opacity-75">{{ p.payer_ref }}</span>{% endif %}</span>
               <span class="tabular-nums">{{ p.amount_minor | k }} <span class="opacity-50">${{ p.amount_usdc }}</span>
                 <span class="ml-1 font-semibold {{ 'text-emerald-700' if p.status == 'paid' else 'opacity-50' }}">{{ "PAID" if p.status == "paid" else p.status | upper }}</span></span>
             </li>

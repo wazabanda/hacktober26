@@ -1,0 +1,287 @@
+<!doctype html>
+<!-- TrackSplit demo film. 1920x1080; render(t) draws frame t (seconds). Driven by render.py, timings in timeline.json. -->
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=block" rel="stylesheet">
+<style>
+  :root {
+    --bg: oklch(97.2% 0.009 165); --ink: oklch(24% 0.03 200); --muted: oklch(45% 0.03 200);
+    --primary: oklch(50% 0.11 172); --primary-deep: oklch(32% 0.07 190); --secondary: oklch(62% 0.15 45);
+    --accent: oklch(81% 0.14 85); --success: oklch(60% 0.14 152);
+  }
+  * { margin: 0; box-sizing: border-box; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
+  body { font-family: "Plus Jakarta Sans", sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; }
+  #stage { position: absolute; inset: 0; overflow: hidden; }
+  #glow { position: absolute; width: 1800px; height: 1800px; border-radius: 50%; left: -400px; top: -900px;
+          background: radial-gradient(circle, oklch(88% 0.06 172 / .55), transparent 62%); }
+  #glow2 { position: absolute; width: 1400px; height: 1400px; border-radius: 50%; right: -500px; bottom: -800px;
+           background: radial-gradient(circle, oklch(90% 0.08 85 / .45), transparent 60%); }
+  .abs { position: absolute; left: 0; top: 0; will-change: transform, opacity; }
+  .phone { width: 384px; height: 803px; padding: 12px; border-radius: 58px; background: #0f1d1f;
+           box-shadow: 0 50px 90px -30px oklch(30% 0.06 190 / .45), 0 0 0 2px #2a3a3c inset; }
+  .screen { position: relative; width: 360px; height: 779px; border-radius: 46px; overflow: hidden; background: var(--bg); }
+  .screen img { position: absolute; left: 7px; top: 30px; width: 346px; height: 749px; opacity: 0; }  /* below a status-bar strip */
+  .notch { position: absolute; left: 50%; top: 10px; width: 110px; height: 30px; margin-left: -55px; border-radius: 20px; background: #0f1d1f; z-index: 5; }
+  .ring { position: absolute; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; border: 4px solid var(--primary); opacity: 0; z-index: 6; }
+  .finger { position: absolute; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; background: oklch(24% 0.03 200 / .28);
+            border: 3px solid #fff; box-shadow: 0 6px 18px oklch(24% 0.03 200 / .3); opacity: 0; z-index: 7; }
+  .paid { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%); padding: 14px 26px; border-radius: 999px; z-index: 8;
+          background: var(--success); color: #fff; font-weight: 800; font-size: 30px; display: flex; gap: 10px; align-items: center; opacity: 0;
+          box-shadow: 0 16px 40px oklch(60% 0.14 152 / .45); }
+  .live { position: absolute; left: 50%; top: -54px; transform: translateX(-50%); font-weight: 700; font-size: 22px; color: var(--muted); white-space: nowrap; }
+  .t { font-weight: 800; letter-spacing: -0.035em; line-height: 1.02; white-space: nowrap; }
+  .s { font-weight: 500; color: var(--muted); line-height: 1.3; }
+  .chip { display: inline-flex; align-items: center; gap: 12px; padding: 16px 28px; border-radius: 999px; font-weight: 700; font-size: 32px;
+          background: oklch(60% 0.14 152 / .14); color: oklch(42% 0.11 152); border: 2px solid oklch(60% 0.14 152 / .35); white-space: nowrap; }
+  #bill { width: 430px; border-radius: 10px; box-shadow: 0 40px 80px -20px oklch(30% 0.05 190 / .35); }
+  #scan { width: 470px; height: 10px; border-radius: 10px; background: var(--primary); box-shadow: 0 0 40px 12px oklch(50% 0.11 172 / .55); }
+  #flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+  #stock .n { font-size: 260px; font-weight: 800; letter-spacing: -0.06em; line-height: .9; font-variant-numeric: tabular-nums; }
+  #logo { display: flex; align-items: center; gap: 28px; }
+  #logo .mark { width: 132px; height: 132px; border-radius: 36px; background: var(--primary); display: grid; place-items: center;
+                box-shadow: 0 30px 60px -20px oklch(50% 0.11 172 / .6); }
+  .dots { display: flex; gap: 14px; justify-content: center; }
+  .dots span { padding: 10px 22px; border-radius: 999px; background: #fff; border: 2px solid oklch(90% 0.02 180); font-weight: 700; font-size: 26px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="glow"></div><div id="glow2"></div>
+
+  <!-- hook -->
+  <div id="h1" class="abs t" style="font-size:150px">8 friends.</div>
+  <div id="h2" class="abs t" style="font-size:150px;color:var(--primary)">1 bill.</div>
+  <img id="bill" class="abs" src="../work/bill.png" alt="">
+  <div id="h3" class="abs t" style="font-size:64px;color:var(--secondary)">“Who had the T-bone?”</div>
+  <div id="scan" class="abs"></div>
+
+  <!-- captions -->
+  <div id="t1" class="abs t" style="font-size:96px"></div>
+  <div id="t2" class="abs s" style="font-size:40px"></div>
+  <div id="chip" class="abs chip"></div>
+  <img id="qr" class="abs" src="../work/qr.png" alt="" style="width:300px;border-radius:24px;background:#fff;padding:18px;box-shadow:0 30px 70px -20px oklch(30% 0.05 190 / .35)">
+
+  <div id="stock" class="abs">
+    <div class="s" style="font-size:34px;font-weight:700;color:var(--ink)">Coke 500ml · in stock</div>
+    <div class="n"><span id="stockn">12</span></div>
+  </div>
+
+  <!-- phones are appended here -->
+  <div id="phones"></div>
+
+  <!-- outro -->
+  <div id="logo" class="abs">
+    <div class="mark"><svg width="74" height="74" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v-11"/></svg></div>
+    <div class="t" style="font-size:150px">TrackSplit</div>
+  </div>
+  <div id="tag" class="abs s" style="font-size:46px;color:var(--ink);font-weight:600;text-align:center;width:1920px">Snap a bill. Share a link. Everyone pays for what they ate.</div>
+  <div id="foot" class="abs dots" style="width:1920px"><span>Google Gemini</span><span>DevDraft</span><span>DigitalOcean</span><span>MIT open source</span></div>
+
+  <div id="flash"></div>
+</div>
+
+<script>
+const TL = window.TL || { scenes: {}, taps: [], updates: [], chimes: [] };
+const $ = (id) => document.getElementById(id);
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const out3 = (x) => 1 - Math.pow(1 - clamp(x), 3);
+const io3 = (x) => { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const back = (x) => { x = clamp(x); const c = 1.7; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+// visible from a (eased in over fi) until b (eased out over fo)
+const vis = (t, a, b = 1e9, fi = .45, fo = .3) => Math.min(out3((t - a) / fi), 1 - clamp((t - (b - fo)) / fo));
+const lerp = (a, b, x) => a + (b - a) * x;
+
+function place(el, x, y, { o = 1, s = 1, r = 0, dy = 0, anchor = 'tl' } = {}) {
+  el.style.opacity = o;
+  const tx = anchor === 'c' ? `translate(-50%,-50%)` : anchor === 'tc' ? 'translate(-50%,0)' : anchor === 'lc' ? 'translate(0,-50%)' : '';
+  el.style.transform = `translate(${x}px,${y + dy}px) ${tx} scale(${s}) rotate(${r}deg)`;
+}
+function text(el, str, x, y, o, opts = {}) {
+  if (el.textContent !== str && str) el.textContent = str;
+  place(el, x, y, { o, dy: (1 - o) * 26, ...opts });
+}
+
+// ---------- phones ----------
+const USE = [
+  ['01_new_empty', '02_new_items', '03_new_totals', '04_host_qr', '10_alice_s0', '10_alice_s1', '10_alice_s2', '10_alice_s3',
+   '22_pay_momo_number', '23_pay_momo_prompt', '24_pay_momo_done', '30_alice_paid', '41_shop_cart', '42_shop_qr', '43_shop_paid'],
+  ['10_bwalya_s0', '10_bwalya_s1', '10_bwalya_s2', '10_bwalya_s3', '25_pay_card', '31_host_payout', '44_receipt'],
+  ['10_chanda_s0', '10_chanda_s1', '10_chanda_s2', '10_chanda_s3', '26_pay_usdc'],
+];
+const K = 346 / 390, OX = 7, OY = 30;  // screenshot css px -> screen px, plus the status-bar inset
+const phones = USE.map((names, i) => {
+  const el = document.createElement('div');
+  el.className = 'abs phone';
+  el.innerHTML = `<div class="live"></div><div class="screen"><div class="notch"></div>${names.map((n) => `<img data-n="${n}" src="../work/shots/${n}.png">`).join('')}
+    <div class="ring"></div><div class="ring"></div><div class="ring"></div><div class="finger"></div>
+    <div class="paid"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Paid</div></div>`;
+  $('phones').appendChild(el);
+  const imgs = Object.fromEntries([...el.querySelectorAll('img')].map((im) => [im.dataset.n, im]));
+  return { el, imgs, rings: [...el.querySelectorAll('.ring')], finger: el.querySelector('.finger'), paid: el.querySelector('.paid'),
+           live: el.querySelector('.live'), screen: el.querySelector('.screen') };
+});
+
+function phone(i, scene, t, { x, y, s = 1, o = 1, r = 0, a, b = null, m = 0, paid = 0, live = '', glow = 0 }) {
+  const p = phones[i];
+  p.el.style.opacity = o;
+  p.el.style.transform = `translate(${x - 192}px,${y - 401}px) scale(${s}) rotate(${r}deg)`;
+  for (const [n, im] of Object.entries(p.imgs)) im.style.opacity = n === a ? 1 : n === b ? m : 0;
+  if (b && m > 0) p.imgs[a].style.opacity = 1;  // b fades in on top of a
+  p.paid.style.opacity = paid;
+  p.paid.style.transform = `translate(-50%,-50%) scale(${lerp(.6, 1, back(paid))})`;
+  p.live.textContent = live;
+  p.el.style.boxShadow = glow ? `0 50px 90px -30px oklch(30% 0.06 190 / .45), 0 0 0 ${2 + 8 * glow}px oklch(50% 0.11 172 / ${.65 * glow})` : '';
+  // taps for this phone in this scene
+  const taps = TL.taps.filter((tp) => tp[0] === scene && tp[1] === i);
+  p.rings.forEach((rg) => (rg.style.opacity = 0));
+  p.finger.style.opacity = 0;
+  let ri = 0;
+  for (const [, , tt, tx, ty] of taps) {
+    const d = t - tt;
+    if (d > -0.3 && d < 0.15) {  // fingertip arrives, presses
+      p.finger.style.opacity = d < 0 ? out3((d + 0.3) / 0.2) : 1 - d / 0.15;
+      p.finger.style.left = OX + tx * K + 'px'; p.finger.style.top = OY + ty * K + 'px';
+      p.finger.style.transform = `scale(${d < 0 ? 1 : 0.85})`;
+    }
+    if (d >= 0 && d < 0.55 && ri < 3) {
+      const rg = p.rings[ri++];
+      rg.style.left = OX + tx * K + 'px'; rg.style.top = OY + ty * K + 'px';
+      rg.style.opacity = 0.9 * (1 - d / 0.55);
+      rg.style.transform = `scale(${lerp(.4, 1.8, out3(d / 0.55))})`;
+    }
+  }
+}
+const hidePhones = (keep) => phones.forEach((p, i) => { if (!keep.includes(i)) p.el.style.opacity = 0; });
+
+// ---------- scenes ----------
+const SC = TL.scenes;
+function render(t) {
+  // reset everything that scenes may show
+  for (const id of ['h1', 'h2', 'h3', 'bill', 'scan', 't1', 't2', 'chip', 'qr', 'stock', 'logo', 'tag', 'foot']) $(id).style.opacity = 0;
+  $('flash').style.opacity = 0;
+  $('glow').style.transform = `translate(${Math.sin(t * .35) * 80}px, ${Math.cos(t * .27) * 60}px)`;
+  $('glow2').style.transform = `translate(${Math.cos(t * .3) * 70}px, ${Math.sin(t * .22) * 50}px)`;
+  hidePhones([]);
+
+  if (t < SC.snap) hook(t);
+  else if (t < SC.share) snap(t);
+  else if (t < SC.live) share(t);
+  else if (t < SC.pay) live(t);
+  else if (t < SC.settled) pay(t);
+  else if (t < SC.shop) settled(t);
+  else if (t < SC.outro) shop(t);
+  else outro(t);
+}
+
+function hook(t) {
+  const end = SC.snap;
+  text($('h1'), '8 friends.', 180, 250, vis(t, .15, end));
+  text($('h2'), '1 bill.', 180, 420, vis(t, .9, end));
+  const b = out3((t - 1.5) / .6);
+  place($('bill'), lerp(1500, 1180, b), lerp(-700, 120, b) + Math.sin(t * 2) * 4, { o: clamp((t - 1.5) / .2), r: lerp(14, -5, b) });
+  text($('h3'), '“Who had the T-bone?”', 180, 660, vis(t, 2.4, end));
+  if (t > end - .3) $('bill').style.opacity = 1;  // bill carries over into the snap scene
+}
+
+function snap(t) {
+  const s0 = SC.snap, end = SC.share;
+  const mv = io3((t - s0) / .7);
+  const billO = 1 - clamp((t - (end - .3)) / .3);
+  place($('bill'), lerp(1180, 300, mv), lerp(120, 280, mv), { o: billO, r: lerp(-5, -2, mv), s: lerp(1, .9, mv) });
+  // scan line sweeps the bill after the shutter tap
+  if (t > 5.0 && t < 6.6) {
+    const k = (t - 5.0) / 1.6;
+    place($('scan'), 285, 290 + k * 540, { o: Math.sin(Math.PI * k), s: .92 });
+  }
+  $('flash').style.opacity = t > 4.95 && t < 5.25 ? 0.7 * (1 - (t - 4.95) / .3) : 0;
+  const po = vis(t, s0 + .25, end);
+  const a = t < 6.5 ? '01_new_empty' : t < 8.0 ? '02_new_items' : '03_new_totals';
+  const prev = t < 6.5 ? null : t < 8.0 ? '01_new_empty' : '02_new_items';
+  const m = t < 6.5 ? 0 : t < 8.0 ? out3((t - 6.5) / .35) : out3((t - 8.0) / .35);
+  phone(0, 'snap', t, { x: 1340, y: 640 + (1 - po) * 40, s: .82, o: po, a: m < 1 && prev ? prev : a, b: m < 1 && prev ? a : null, m });
+  text($('t1'), t < 6.0 ? 'Snap the bill.' : 'Gemini reads every line.', 960, 70, t < 6.0 ? vis(t, s0 + .3, 6.0) : vis(t, 6.0, end), { anchor: 'tc', s: .8 });
+  text($('t2'), 'Items, VAT and service, typed out for you to check.', 960, 178, vis(t, 6.6, end), { anchor: 'tc' });
+  text($('chip'), '✓  Lines match the total', 500, 880, vis(t, 8.4, end), { anchor: 'tc', s: lerp(.85, 1, back((t - 8.4) / .4)) });
+}
+
+function share(t) {
+  const s0 = SC.share, end = SC.live;
+  const po = vis(t, s0, end);
+  phone(0, 'share', t, { x: 620, y: 560 + (1 - po) * 40, o: po, a: '04_host_qr' });
+  text($('t1'), 'Share one link.', 1000, 300, vis(t, s0 + .2, end));
+  text($('t2'), 'Friends scan the QR. No app, no sign-up.', 1000, 420, vis(t, s0 + .9, end));
+  const q = back((t - (s0 + 1.4)) / .5);
+  place($('qr'), 1000, 520, { o: clamp((t - (s0 + 1.4)) / .2) * (1 - clamp((t - (end - .3)) / .3)), s: lerp(.6, 1, q) });
+}
+
+function live(t) {
+  const s0 = SC.live, end = SC.pay;
+  const xs = [520, 960, 1400], names = ['alice', 'bwalya', 'chanda'], labels = ['Alice', 'Bwalya', 'Chanda'];
+  const step = TL.updates.filter((u) => t >= u).length;  // how many people have claimed so far
+  phones.slice(0, 3).forEach((_, i) => {
+    const o = vis(t, s0 + i * .12, end);
+    const u = TL.updates[step - 1];
+    const m = step > 0 ? out3((t - u) / .3) : 0;
+    const a = `10_${names[i]}_s${step > 0 && m < 1 ? step - 1 : step}`;
+    const b = step > 0 && m < 1 ? `10_${names[i]}_s${step}` : null;
+    const glow = step > 0 ? Math.max(0, 1 - (t - u) / .7) : 0;
+    phone(i, 'live', t, { x: xs[i], y: 625 + (1 - o) * 60, s: .9, o, a, b, m, live: labels[i] + "'s phone", glow });
+  });
+  text($('t1'), t < 18 ? 'Tap what you had.' : 'Every phone updates live.', 960, 70, t < 18 ? vis(t, s0 + .2, 18) : vis(t, 18, end), { anchor: 'tc', s: .78 });
+}
+
+function pay(t) {
+  const s0 = SC.pay, end = SC.settled;
+  const xs = [520, 960, 1400];
+  const o = (i) => vis(t, s0 + i * .12, end);
+  const a0 = t < 23.0 ? '22_pay_momo_number' : t < 24.5 ? '23_pay_momo_prompt' : '24_pay_momo_done';
+  phone(0, 'pay', t, { x: xs[0], y: 625 + (1 - o(0)) * 60, s: .9, o: o(0), a: a0, live: 'Mobile money' });
+  phone(1, 'pay', t, { x: xs[1], y: 625 + (1 - o(1)) * 60, s: .9, o: o(1), a: '25_pay_card', live: 'Card', paid: clamp((t - 25.5) / .35) });
+  phone(2, 'pay', t, { x: xs[2], y: 625 + (1 - o(2)) * 60, s: .9, o: o(2), a: '26_pay_usdc', live: 'USDC', paid: clamp((t - 26.5) / .35) });
+  text($('t1'), 'Everyone pays their exact share.', 960, 70, vis(t, s0 + .2, end), { anchor: 'tc', s: .78 });
+}
+
+function settled(t) {
+  const s0 = SC.settled, end = SC.shop;
+  const o0 = vis(t, s0, end), o1 = vis(t, s0 + .15, end);
+  phone(0, 'settled', t, { x: 1120, y: 560 + (1 - o0) * 40, s: .9, o: o0, a: '30_alice_paid', r: -3 });
+  phone(1, 'settled', t, { x: 1520, y: 540 + (1 - o1) * 40, s: .9, o: o1, a: '31_host_payout', r: 3 });
+  text($('t1'), 'Everyone’s paid.', 140, 330, vis(t, s0 + .25, end));
+  text($('t2'), 'Money only leaves after the host\ntaps Approve.', 140, 450, vis(t, s0 + .9, end));
+  $('t2').style.whiteSpace = 'pre-line';
+  text($('chip'), '✓  Payout approved', 140, 600, vis(t, 31.0, end), { s: lerp(.85, 1, back((t - 31.0) / .4)) });
+}
+
+function shop(t) {
+  const s0 = SC.shop, end = SC.outro;
+  $('t2').style.whiteSpace = 'nowrap';
+  const o0 = vis(t, s0, end), o1 = vis(t, 34.5, end);
+  const a = t < 33.0 ? '41_shop_cart' : t < 34.0 ? '42_shop_qr' : '43_shop_paid';
+  phone(0, 'shop', t, { x: 1150, y: 560 + (1 - o0) * 40, s: .9, o: o0, a });
+  phone(1, 'shop', t, { x: 1560, y: 580 + (1 - o1) * 60, s: .86, o: o1, a: '44_receipt', r: 4 });
+  text($('t1'), 'Shop mode.', 140, 230, vis(t, s0 + .2, end));
+  text($('t2'), 'Snap the counter. Prices from your\ncatalogue, stock updates itself.', 140, 350, vis(t, s0 + .7, end));
+  $('t2').style.whiteSpace = 'pre-line';
+  const so = vis(t, 33.2, end);
+  place($('stock'), 140, 520, { o: so, dy: (1 - so) * 26 });
+  const n = t < 34.0 ? 12 : t < 34.5 ? 11 : t < 35.0 ? 10 : 9;
+  $('stockn').textContent = n;
+  $('stockn').style.color = n < 12 ? 'var(--secondary)' : 'var(--ink)';
+}
+
+function outro(t) {
+  const s0 = SC.outro;
+  const o = vis(t, s0 + .15, 1e9, .6);
+  place($('logo'), 960, 380, { o, anchor: 'c', s: lerp(.92, 1, out3((t - s0) / .8)) });
+  text($('tag'), 'Snap a bill. Share a link. Everyone pays for what they ate.', 0, 520, vis(t, s0 + .7, 1e9, .5));
+  place($('foot'), 0, 660, { o: vis(t, s0 + 1.4, 1e9, .5) });
+}
+
+window.render = render;
+window.ready = Promise.all([document.fonts.ready, ...[...document.images].map((im) => im.decode().catch(() => {}))]);
+</script>
+</body>
+</html>

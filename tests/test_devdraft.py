@@ -65,10 +65,15 @@ def test_full_mock_flow():
             assert c.post(f"/api/splits/{slug}/claim", json={"token": a, "item_id": chips["id"], "unit_index": 1}).status_code == 409
             cb = c.post(f"/api/splits/{slug}/confirm", json={"token": b}).json()
             c.post(f"/api/splits/{slug}/confirm", json={"token": host})
-            for u in (ca["url"], cb["url"]):
-                c.post(u.split("8000")[-1] if "8000" in u else u[u.index("/mock-pay"):], follow_redirects=False)
+            pa, pb = ca["url"][ca["url"].index("/mock-pay"):], cb["url"][cb["url"].index("/mock-pay"):]
+            assert c.post(pa, json={"method": "card", "ref": "Visa ••0002"}).status_code == 402  # test decline
+            assert c.post(pb, json={"method": "momo", "ref": "MTN 096•••1000"}).status_code == 402  # no funds
+            assert c.post(pa, json={"method": "card", "ref": "Visa ••4242"}).status_code == 200
+            assert c.post(pb, json={"method": "momo", "ref": "Airtel 097•••4567"}).status_code == 200
+            assert "Paid with Visa ••4242" in c.get(pa).text
         with Session(engine) as s:
-            assert {p.status for p in s.exec(select(Payment)).all()} == {"paid"}
+            pays = s.exec(select(Payment).where(Payment.split_id != None)).all()  # noqa: E711
+            assert {p.status for p in pays} == {"paid"} and {p.method for p in pays} == {"card", "momo"}
             po = s.exec(select(Payout)).one()
             assert po.status == "proposed"
         assert c.post(f"/api/splits/{slug}/payout", json={"token": a, "approve": True}).status_code == 403

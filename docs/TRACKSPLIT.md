@@ -7,8 +7,8 @@ Built for **Hacktoberfest Hack Day Lusaka x Tech Kaizen** (31 Oct 2026). One pro
 
 | Challenge | How TrackSplit qualifies |
 |---|---|
-| **DigitalOcean: Best Open-Source AI Project** | MIT-licensed repo. Built around the open-weight Gemma 4 model and an open-source harness (Pydantic AI). Ships a reusable `receipt-reader` agent skill other agents can call. Hosted on DigitalOcean App Platform. |
-| **Google DeepMind: Best Use of Gemma 4** | Gemma 4 does the multimodal work: it reads receipt photos and identifies products on a counter. That is the core of the product, not decoration. |
+| **DigitalOcean: Best Open-Source AI Project** | MIT-licensed repo. Built on an open-source harness (Pydantic AI) with the model as a single env setting, so it runs on Google Gemini or an open-weight Gemma 4 model unchanged. We developed on DeepSeek and Gemma and ship Gemini in production. Ships a reusable `receipt-reader` agent skill other agents can call. Hosted on DigitalOcean App Platform. |
+| **Google DeepMind** | Google Gemini does the multimodal work: it reads receipt photos and identifies products on a counter. That is the core of the product, not decoration. Setting `LLM_MODEL` to a Gemma 4 id runs the same flow on Gemma 4. |
 | **DevDraft API Build Challenge** | Real DevDraft payment links, one per person. Webhooks mark people as paid. A host payout needs human approval before it runs. Fits two of DevDraft's build directions: "Snap. Chat. Get Paid" and "Give the Agent a Wallet". |
 
 ---
@@ -33,7 +33,7 @@ TrackSplit solves both with the same engine: **a photo goes in, typed line items
 
 ### Mode A: Split (real-time bill splitting)
 1. The host takes a photo of the bill.
-2. Gemma 4 reads it into typed line items (name, quantity, unit price, line total) plus subtotal, tax, service charge and total.
+2. Gemini reads it into typed line items (name, quantity, unit price, line total) plus subtotal, tax, service charge and total.
 3. The code checks the arithmetic. If the lines don't add up to the total, the agent re-reads the photo. If they still don't, the host fixes the bill on an edit screen.
 4. The host picks where the money goes: **their own wallet** (they already paid) or the **business wallet** (the bill isn't paid yet; this is pay-at-table).
 5. TrackSplit creates an interactive receipt at `/s/{slug}` and shows it as a link and a QR code.
@@ -52,13 +52,13 @@ Unclaimed items: the host can assign them to themself or press "split the leftov
 ### Mode B: Track (shop counter + stock)
 1. The owner sets up a product catalogue: name, aliases, price and stock count. It can be seeded from a CSV file or a photo of the price board.
 2. At checkout, the owner photographs the items on the counter, or a handwritten order.
-3. Gemma 4 identifies the items and quantities. The `match_products` tool matches them against the database. **Prices always come from the database, never from the model.**
+3. Gemini identifies the items and quantities. The `match_products` tool matches them against the database. **Prices always come from the database, never from the model.**
 4. The owner checks the cart and fixes anything unmatched. They can then:
    - **Charge**: one DevDraft payment link or QR code for the whole cart, or
    - **Split this**: turn the cart into a Mode A split, for a table of customers.
 5. When payment completes, stock is decremented in the same database transaction and a receipt is sent as a link (and optionally as a WhatsApp share).
 6. When stock falls below a set threshold, a low-stock badge appears and the agent mentions it ("Mosi: 4 left").
-7. Restocking works by photographing the delivery note. Gemma reads it, the owner confirms, and stock goes up.
+7. Restocking works by photographing the delivery note. Gemini reads it, the owner confirms, and stock goes up.
 
 ### Shared
 - Every receipt has a public read-only page with a QR code.
@@ -67,7 +67,7 @@ Unclaimed items: the host can assign them to themself or press "split the leftov
 
 ## 4. Design principles
 
-1. **The LLM only reads; code does the money.** Gemma pulls text and structure out of photos. All splitting, rounding, tax allocation, currency conversion and stock changes are plain Python with tests.
+1. **The LLM only reads; code does the money.** Gemini pulls text and structure out of photos. All splitting, rounding, tax allocation, currency conversion and stock changes are plain Python with tests.
 2. **Every input and output is a Pydantic model.** Pydantic AI `output_type` enforces it, and a failed validation triggers a `ModelRetry` so the model tries again.
 3. **A human approves money going out.** Payment links only collect money. Any outbound transfer (the host payout) is a `requires_approval=True` tool. This matches DevDraft's rule that transfers over $1 need human approval.
 4. **No accounts.** Participants are identified by an anonymous token kept in `localStorage`.
@@ -82,7 +82,7 @@ Unclaimed items: the host can assign them to themself or press "split the leftov
  │ Alpine.js    │ ◀────────────────────────── │  ├─ routes (Jinja templates)         │
  │ pages        │  WebSocket (state push)     │  ├─ hub.py  (in-memory WS rooms)     │
  └──────────────┘                             │  ├─ split.py (pure money math)       │
-                                              │  ├─ agents.py (Pydantic AI)  ────────┼──▶ Gemini API (Gemma 4)
+                                              │  ├─ agents.py (Pydantic AI)  ────────┼──▶ Gemini API (Gemini 2.5 Flash)
                                               │  ├─ devdraft.py (live | mock) ───────┼──▶ api.devdraft.ai
                                               │  └─ SQLite (SQLModel)                │◀── DevDraft webhooks
                                               └──────────────────────────────────────┘
@@ -93,7 +93,7 @@ Unclaimed items: the host can assign them to themself or press "split the leftov
 | Web | FastAPI + Jinja2 | Native WebSockets, Pydantic everywhere, async LLM calls |
 | Real-time | FastAPI WebSocket, in-memory room hub | Simple enough for one process; see the scaling note |
 | DB | SQLite via SQLModel | SQLModel tables are Pydantic models, and a hackathon needs no Postgres |
-| AI | Pydantic AI + Google provider, Gemma 4 (fallback Gemini Flash) | Typed outputs, tools, approval-gated tools |
+| AI | Pydantic AI. Developed and tested on DeepSeek and Gemma; production runs Gemini 2.5 Flash | Typed outputs, tools, approval-gated tools |
 | UI | Tailwind + daisyUI 5 from CDN, Alpine.js | No build step; works well on phones |
 | Payments | DevDraft REST (`httpx`) | Payment links, webhooks, wallets |
 | Hosting | DigitalOcean App Platform, 1 instance | Public HTTPS URL for phones and webhooks; supports the DO challenge |
@@ -139,11 +139,11 @@ Payout(id, split_id, amount_usdc, status: proposed|approved|sent|failed)
 from pydantic_ai.models.google import GoogleModel
 from pydantic_ai.providers.google import GoogleProvider
 model = GoogleModel(os.environ["LLM_MODEL"], provider=GoogleProvider(api_key=os.environ["GEMINI_API_KEY"]))
-# LLM_MODEL = Gemma 4 id on the Gemini API (check models.list); fallback "gemini-2.5-flash"
+# LLM_MODEL = "gemini-2.5-flash" (any Gemini API id, including Gemma 4 ids)
 ```
-Gemma on the Gemini API has had limited support for system instructions and native tool calling in the past. Two mitigations:
+The code is written so a Gemma 4 id can be dropped in. Gemma on the Gemini API has had limited support for system instructions and native tool calling, so:
 - The extraction agents use `PromptedOutput(...)`, which needs no tool calling, and put their instructions in the user message.
-- The tool-using `counter_agent` reads its model from `AGENT_MODEL`. Point it at Gemini Flash if Gemma's tool calling turns out to be unreliable. Gemma still does all the vision work, which is what the Gemma track judges.
+- The tool-using `counter_agent` reads its model from `AGENT_MODEL`. It can point at a different model from the vision reader if needed.
 
 ### Agents
 | Agent | Input | Output (Pydantic) | Notes |
@@ -235,7 +235,7 @@ The client logs the raw response, and the code reads the URL from the first of `
 | Route | Who | Content |
 |---|---|---|
 | `/` | everyone | Hero, "Split a bill" and "Open my shop" buttons |
-| `/new` | host | Camera `file-input` (`capture="environment"`), spinner while Gemma reads, editable item table, payee toggle, "Create split" |
+| `/new` | host | Camera `file-input` (`capture="environment"`), spinner while Gemini reads, editable item table, payee toggle, "Create split" |
 | `/s/{slug}` | participant | Name modal, then item cards (tap to claim, `avatar-group` shows claimers), sticky bottom bar with "My share Kxx.xx" and a Confirm button, then a Pay button, then a ✅ receipt |
 | `/s/{slug}/host` | host | Same live receipt plus a QR code, a participant table (`badge` showing choosing/confirmed/paid), progress `radial-progress`, payout approval `modal` |
 | `/shop` | owner | Products table with stock badges, "Snap counter" button, cart drawer, Charge / Split buttons, wallet balance `stat` |
@@ -247,18 +247,18 @@ The client logs the raw response, and the code reads the URL from the first of `
 ## 12. Demo script (3 minutes)
 
 1. **Story (20s):** "Eight of us, one bill, three days of WhatsApp reminders."
-2. **Snap (30s):** photograph a real Lusaka restaurant bill. Gemma's extraction appears and the totals check shows ✅.
+2. **Snap (30s):** photograph a real Lusaka restaurant bill. Gemini's extraction appears and the totals check shows ✅.
 3. **Split live (60s):** the `/demo` page shows 4 phones. Tap items on different phones, and the claims and shares update on all of them at once. Show a shared plate of chips split ½ and ½.
 4. **Pay (30s):** one participant pays **for real** in live mode with a few cents. The webhook arrives and their row turns green on every phone. Then the host payout approval modal appears, showing the human-approval rule in action.
 5. **Track (30s):** in shop mode, photograph 3 drinks on the counter. They match the catalogue, stock drops from 12 to 9, and a receipt is sent.
-6. **Close (10s):** open-source on GitHub, built on Gemma 4, running on DigitalOcean, paid through DevDraft.
+6. **Close (10s):** open-source on GitHub, built on Gemini, running on DigitalOcean, paid through DevDraft.
 
 ## 13. Risks
 
 | Risk | Mitigation |
 |---|---|
-| Gemma misreads the bill | Totals validator, then `ModelRetry`, then the host edit screen |
-| Gemma tool calling is unreliable | `PromptedOutput` for extraction; `AGENT_MODEL` can be switched to Gemini Flash for the tool agent |
+| Gemini misreads the bill | Totals validator, then `ModelRetry`, then the host edit screen |
+| Model tool calling is unreliable | `PromptedOutput` for extraction; `AGENT_MODEL` can point the tool agent at a different model |
 | Payment-link response shape is unknown | Log the raw response, try several candidate keys, check at kickoff |
 | Webhook can't reach the app or isn't delivered | Poll the payment-link status every 5 seconds |
 | Venue Wi-Fi drops | Mock mode, a recorded backup video, and a hotspot |

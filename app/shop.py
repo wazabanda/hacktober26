@@ -1,4 +1,4 @@
-"""Shop mode: match what Gemma saw to the catalogue, price from the DB, move stock."""
+"""Shop mode: match what Gemini saw to the catalogue, price from the DB, move stock."""
 
 import difflib
 

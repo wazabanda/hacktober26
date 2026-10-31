@@ -93,7 +93,7 @@
       </div>
       <template x-for="(l, i) in cart" :key="i">
         <div class="rounded-field p-2.5 border" :class="l.product_id ? 'bg-base-200 border-transparent' : 'bg-warning/12 border-warning/50'">
-          <div class="text-xs text-base-content/60" x-show="l.label" x-text="'Gemma saw: ' + l.label + (l.confidence != null ? ' (' + Math.round(l.confidence * 100) + '%)' : '')"></div>
+          <div class="text-xs text-base-content/60" x-show="l.label" x-text="'Gemini saw: ' + l.label + (l.confidence != null ? ' (' + Math.round(l.confidence * 100) + '%)' : '')"></div>
           <div class="flex gap-2 items-center mt-1">
             <select class="select select-sm flex-1" x-model.number="l.product_id" aria-label="Product">
               <option :value="null">— not matched —</option>

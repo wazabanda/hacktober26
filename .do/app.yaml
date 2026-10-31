@@ -14,8 +14,7 @@ services:
     health_check:
       http_path: /health
     envs:
-      - {key: LLM_MODEL, value: "deepseek:deepseek-chat"}
-      - {key: DEEPSEEK_API_KEY, type: SECRET}
+      - {key: LLM_MODEL, value: "gemini-2.5-flash"}
       - {key: GEMINI_API_KEY, type: SECRET}
       - {key: DEVDRAFT_MODE, value: mock}
       - {key: DEVDRAFT_CLIENT_KEY, type: SECRET}
