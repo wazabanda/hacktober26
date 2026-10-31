@@ -1,0 +1,8 @@
+.env
+.venv
+*.db
+uploads/
+.git
+__pycache__
+.pytest_cache
+.impeccable

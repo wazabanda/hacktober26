@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "app/templates/shop.html"
+        ],
+        "createdAt": "2026-10-31T10:34:00.362Z",
+        "reason": "agent: img uses Alpine :src binding, set at runtime"
+      }
+    ]
+  }
+}

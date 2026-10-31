@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="min-h-dvh flex items-center justify-center p-4">
+  <div class="card bg-base-100 shadow-md w-full max-w-sm">
+    <div class="card-body items-center text-center">
+      <span class="badge badge-warning">DevDraft mock checkout</span>
+      <h2 class="card-title mt-2">Pay ${{ pay.amount_usdc }} USDC</h2>
+      <p class="opacity-70">{{ pay.amount_minor | k }}</p>
+      {% if pay.status == "paid" %}
+        <div class="alert alert-success mt-2">{{ icon("circle-check") }}<span>Paid</span></div>
+        {% if back %}<a class="btn btn-ghost" href="{{ back }}">Back to the bill</a>{% endif %}
+      {% else %}
+        <form method="post" action="/mock-pay/{{ pay.id }}?back={{ back | urlencode }}" class="w-full mt-2">
+          <button class="btn btn-primary btn-block">Pay ${{ pay.amount_usdc }}</button>
+        </form>
+        {% if back %}<a class="btn btn-ghost btn-sm" href="{{ back }}">Cancel</a>{% endif %}
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,29 @@
+# doctl apps create --spec .do/app.yaml   (or: DO dashboard > Create App > GitHub repo; it finds the Dockerfile)
+name: tracksplit
+region: fra
+services:
+  - name: web
+    github:
+      repo: wazabanda/hacktober26
+      branch: master
+      deploy_on_push: true
+    dockerfile_path: Dockerfile
+    http_port: 8080
+    instance_count: 1            # in-memory websocket hub: never scale past 1
+    instance_size_slug: apps-s-1vcpu-1gb
+    health_check:
+      http_path: /health
+    envs:
+      - {key: LLM_MODEL, value: "deepseek:deepseek-chat"}
+      - {key: DEEPSEEK_API_KEY, type: SECRET}
+      - {key: GEMINI_API_KEY, type: SECRET}
+      - {key: DEVDRAFT_MODE, value: mock}
+      - {key: DEVDRAFT_CLIENT_KEY, type: SECRET}
+      - {key: DEVDRAFT_CLIENT_SECRET, type: SECRET}
+      - {key: DEVDRAFT_WEBHOOK_SECRET, type: SECRET}
+      - {key: PUBLIC_BASE_URL, value: "${APP_URL}"}
+      - {key: FX_ZMW_PER_USD, value: "26.5"}
+      - {key: CHARGE_SCALE, value: "1"}
+      - {key: MAX_TXN_USD, value: "5"}
+      - {key: MAX_TEAM_USD, value: "50"}
+      - {key: DATABASE_URL, value: "sqlite:////tmp/tracksplit.db"}

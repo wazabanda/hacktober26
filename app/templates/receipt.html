@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Receipt #{{ r.id }}{% endblock %}
+{% block body %}
+<div class="max-w-md mx-auto p-4">
+  <div class="card bg-base-100 shadow-sm">
+    <div class="card-body">
+      <h2 class="card-title">{{ r.merchant or "Receipt" }} <span class="badge badge-ghost">#{{ r.id }}</span></h2>
+      <p class="text-xs opacity-60">{{ r.created_at.strftime("%d %b %Y %H:%M") }} UTC</p>
+      <table class="table table-sm">
+        <tbody>
+        {% for it in items %}
+          <tr>
+            <td>{{ it.qty }}× {{ it.name }}
+              {% if it.product_id and stock.get(it.product_id) %}<span class="badge badge-xs badge-ghost">{{ stock[it.product_id].stock_qty }} left</span>{% endif %}</td>
+            <td class="text-right">{{ it.line_total_minor | k }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      <div class="text-sm space-y-0.5">
+        {% if r.tax_minor %}<div class="flex justify-between"><span>Tax</span><span>{{ r.tax_minor | k }}</span></div>{% endif %}
+        {% if r.service_minor %}<div class="flex justify-between"><span>Service</span><span>{{ r.service_minor | k }}</span></div>{% endif %}
+        {% if r.tip_minor %}<div class="flex justify-between"><span>Tip</span><span>{{ r.tip_minor | k }}</span></div>{% endif %}
+        <div class="flex justify-between font-bold text-base"><span>Total</span><span>{{ r.total_minor | k }}</span></div>
+      </div>
+      {% if pays %}
+      <div class="divider my-1">Payments</div>
+      <ul class="text-sm space-y-1">
+        {% for p in pays %}
+        <li class="flex justify-between">
+          <span>{{ names.get(p.participant_id, "Customer") }}</span>
+          <span>{{ p.amount_minor | k }} · ${{ p.amount_usdc }}
+            <span class="badge badge-xs {{ 'badge-success' if p.status == 'paid' else 'badge-ghost' }}">{{ p.status }}</span></span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      <div class="flex flex-col items-center mt-3">
+        <img src="/qr.png?data={{ url | urlencode }}" alt="QR code for this receipt" class="w-28 h-28 bg-white p-1 rounded">
+        <a class="btn btn-sm btn-primary mt-3 gap-1" href="/r/{{ r.id }}/receipt.pdf" target="_blank">{{ icon("file-down", "size-4") }} Download PDF</a>
+        <a class="btn btn-sm btn-ghost mt-1 gap-1" href="https://wa.me/?text={{ ('Your receipt: ' ~ url) | urlencode }}" target="_blank">{{ icon("message-circle", "size-4") }} Share on WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

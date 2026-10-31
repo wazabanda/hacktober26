@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="hero min-h-dvh">
+  <div class="hero-content text-center">
+    <div class="max-w-md">
+      <h1 class="text-5xl font-bold">TrackSplit</h1>
+      <p class="py-6">Snap a bill, share a link, everyone pays for what they ate.<br>
+        Snap the counter, the shop knows its prices and stock.</p>
+      <div class="flex flex-col gap-3">
+        <a href="/new" class="btn btn-primary btn-lg">{{ icon("receipt") }} Split a bill</a>
+        <a href="/shop" class="btn btn-outline btn-lg">{{ icon("store") }} Open my shop</a>
+      </div>
+      <p class="mt-6 text-xs opacity-60">Gemma 4 · DevDraft · DigitalOcean · MIT</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

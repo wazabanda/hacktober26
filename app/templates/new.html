@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}TrackSplit · New split{% endblock %}
+{% block body %}
+<script src="/static/app.js"></script>
+<div x-data="newSplit()" class="max-w-md mx-auto p-3 pb-28 space-y-3">
+  <div class="flex items-center gap-2"><a href="/" class="btn btn-ghost btn-sm btn-square" aria-label="Back">{{ icon("arrow-left") }}</a><h1 class="text-xl font-bold">Split a bill</h1></div>
+
+  <div class="card bg-base-100 shadow-sm" x-show="!items.length && !loading">
+    <div class="card-body p-4">
+      <div class="text-sm font-medium">Photo of the bill</div>
+      <!-- capture opens the rear camera straight away on phones; the gallery button has no capture so it opens photos -->
+      <label class="btn btn-primary btn-lg btn-block">
+        {{ icon("camera") }} Take photo
+        <input type="file" accept="image/*" capture="environment" class="hidden" @change="upload($event)">
+      </label>
+      <label class="btn btn-outline btn-block">
+        {{ icon("image") }} Choose from gallery
+        <input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" class="hidden" @change="upload($event)">
+      </label>
+      <button class="btn btn-ghost btn-sm" @click="items = [{name: '', qty: 1, line_total: ''}]">or type it in</button>
+    </div>
+  </div>
+
+  <div class="card bg-base-100 shadow-sm" x-show="loading" x-cloak>
+    <div class="card-body items-center text-center p-6">
+      <span class="loading loading-dots loading-lg text-primary"></span>
+      <p>Reading your bill…</p>
+    </div>
+  </div>
+
+  <div class="alert alert-error alert-soft" x-show="error" x-cloak><span x-text="error"></span></div>
+  <div class="alert alert-warning alert-soft text-sm" x-show="unreadable.length" x-cloak>
+    <div><b>Couldn't read:</b> <span x-text="unreadable.join('; ')"></span></div>
+  </div>
+
+  <template x-if="items.length">
+    <div class="space-y-3">
+      <div class="card bg-base-100 shadow-sm">
+        <div class="card-body p-3 gap-2">
+          <input class="input input-sm w-full" x-model="merchant" placeholder="Restaurant">
+          <div class="grid grid-cols-[1fr_3rem_5.5rem_1.5rem] gap-1 text-xs opacity-60 px-1"><span>Item</span><span>Qty</span><span class="text-right">Line total</span><span></span></div>
+          <template x-for="(it, i) in items" :key="i">
+            <div class="grid grid-cols-[1fr_3rem_5.5rem_1.5rem] gap-1 items-center">
+              <input class="input input-sm" x-model="it.name" placeholder="Item">
+              <input class="input input-sm px-1 text-center" type="number" min="1" inputmode="numeric" x-model.number="it.qty">
+              <input class="input input-sm px-1 text-right" type="number" step="0.01" inputmode="decimal" x-model="it.line_total">
+              <button class="btn btn-ghost btn-xs px-0" @click="items.splice(i, 1)" aria-label="Remove item">{{ icon("x", "size-4") }}</button>
+            </div>
+          </template>
+          <button class="btn btn-ghost btn-sm gap-1" @click="items.push({name: '', qty: 1, line_total: ''})">{{ icon("plus", "size-4") }} Add item</button>
+        </div>
+      </div>
+
+      <div class="card bg-base-100 shadow-sm">
+        <div class="card-body p-3 gap-2 text-sm">
+          <div class="flex justify-between"><span>Items sum</span><span x-text="k(linesMinor())"></span></div>
+          <label class="flex justify-between items-center gap-2">
+            <span>Tax / VAT <label class="ml-2 text-xs"><input type="checkbox" class="checkbox checkbox-xs" x-model="tax_included"> incl. in prices</label></span>
+            <input class="input input-sm w-24 text-right" type="number" step="0.01" inputmode="decimal" x-model="tax">
+          </label>
+          <label class="flex justify-between items-center"><span>Service</span>
+            <input class="input input-sm w-24 text-right" type="number" step="0.01" inputmode="decimal" x-model="service"></label>
+          <label class="flex justify-between items-center"><span>Bill total</span>
+            <input class="input input-sm w-24 text-right font-bold" type="number" step="0.01" inputmode="decimal" x-model="total"></label>
+          <label class="flex justify-between items-center"><span>Tip (added)</span>
+            <input class="input input-sm w-24 text-right" type="number" step="0.01" inputmode="decimal" x-model="tip"></label>
+          <div class="flex justify-end">
+            <span class="badge gap-1" :class="check().ok ? 'badge-success' : 'badge-warning'">
+              <span x-show="check().ok">{{ icon("check", "size-3.5") }}</span><span x-show="!check().ok">{{ icon("triangle-alert", "size-3.5") }}</span>
+              <span x-text="check().text"></span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card bg-base-100 shadow-sm">
+        <div class="card-body p-3 gap-3">
+          <input class="input w-full" x-model="host_name" placeholder="Your name" maxlength="40">
+          <div>
+            <div class="text-sm mb-1">Money goes to</div>
+            <div class="join w-full">
+              <input class="join-item btn flex-1" type="radio" value="host" x-model="payee" aria-label="My wallet">
+              <input class="join-item btn flex-1" type="radio" value="business" x-model="payee" aria-label="Business wallet">
+            </div>
+            <p class="text-xs opacity-60 mt-1" x-text="payee === 'host' ? 'You already paid; friends pay you back.' : 'Bill not paid yet; everyone pays the restaurant.'"></p>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-block btn-lg" :disabled="busy || !host_name.trim()" @click="create()">
+        <span x-show="busy" class="loading loading-spinner"></span> Create split
+      </button>
+    </div>
+  </template>
+</div>
+
+<script>
+async function shrink(file, max = 1600) {
+  // Phones shoot 4000px photos; Gemma reads 1600px fine and it uploads fast.
+  try {
+    const img = await createImageBitmap(file);
+    const scale = Math.min(1, max / Math.max(img.width, img.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return await new Promise((res) => c.toBlob(res, 'image/jpeg', 0.85));
+  } catch { return file; }
+}
+
+function newSplit() {
+  return {
+    items: [], merchant: '', tax: '0', tax_included: false, service: '0', tip: '0', total: '', unreadable: [],
+    host_name: localStorage.getItem('ts:name') || '', payee: 'host', loading: false, busy: false, error: '',
+    async upload(e) {
+      const f = e.target.files[0];
+      if (!f) return;
+      this.loading = true; this.error = '';
+      try {
+        const fd = new FormData();
+        fd.append('file', await shrink(f), 'bill.jpg');
+        const r = await fetch('/api/extract/receipt', { method: 'POST', body: fd });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.detail || 'Extraction failed');
+        Object.assign(this, {
+          merchant: j.merchant || '', tax: j.tax, service: j.service, total: j.total, tax_included: j.tax_included,
+          unreadable: j.unreadable || [], items: j.items.map((i) => ({ name: i.name, qty: i.qty, line_total: i.line_total })),
+        });
+      } catch (err) {
+        this.error = err.message;
+        this.items = [{ name: '', qty: 1, line_total: '' }];
+      } finally { this.loading = false; e.target.value = ''; }
+    },
+    m(v) { return Math.round(parseFloat(v || 0) * 100) || 0; },
+    linesMinor() { return this.items.reduce((a, i) => a + this.m(i.line_total), 0); },
+    check() {
+      const exp = this.linesMinor() + this.m(this.service) + (this.tax_included ? 0 : this.m(this.tax));
+      const tot = this.m(this.total);
+      if (!tot) return { ok: false, text: 'enter the bill total' };
+      const diff = tot - exp;
+      return Math.abs(diff) <= Math.max(100, tot / 100)
+        ? { ok: true, text: 'lines match total' }
+        : { ok: false, text: `lines ${diff > 0 ? 'short' : 'over'} by ${k(Math.abs(diff))}` };
+    },
+    async create() {
+      this.busy = true; this.error = '';
+      localStorage.setItem('ts:name', this.host_name);
+      try {
+        const r = await post('/api/splits', {
+          host_name: this.host_name, payee: this.payee, merchant: this.merchant || null,
+          items: this.items.filter((i) => i.name && i.line_total !== '').map((i) => ({ name: i.name, qty: i.qty || 1, line_total: String(i.line_total) })),
+          tax: String(this.tax || 0), tax_included: this.tax_included, service: String(this.service || 0),
+          tip: String(this.tip || 0), total: String(this.total || (this.linesMinor() / 100)),
+        });
+        localStorage.setItem(`ts:${r.slug}:host`, r.token);
+        location.href = `/s/${r.slug}/host`;
+      } catch (err) { this.error = err.message; this.busy = false; }
+    },
+  };
+}
+</script>
+{% endblock %}

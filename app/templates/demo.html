@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}TrackSplit · 4-phone demo{% endblock %}
+{% block body %}
+{% if host_token %}<script>localStorage.setItem('ts:{{ slug }}:host', '{{ host_token }}')</script>{% endif %}
+<div class="p-4">
+  <div class="flex items-center gap-3 mb-4 flex-wrap">
+    <h1 class="text-2xl font-bold">TrackSplit live demo</h1>
+    <span class="badge badge-ghost">split {{ slug }}</span>
+    <span class="badge {{ 'badge-warning' if mode == 'mock' else 'badge-success' }}">DevDraft {{ mode }}</span>
+    <a class="btn btn-sm btn-outline ml-auto" href="/demo">New sample bill</a>
+  </div>
+  <div class="flex gap-6 flex-wrap justify-center">
+    {% for label, src in [("Host", "/s/" ~ slug ~ "/host"), ("Alice", "/s/" ~ slug ~ "?d=alice"), ("Bwalya", "/s/" ~ slug ~ "?d=bwalya"), ("Chanda", "/s/" ~ slug ~ "?d=chanda")] %}
+    <div class="flex flex-col items-center gap-2">
+      <div class="mockup-phone scale-90 origin-top -mb-16">
+        <div class="mockup-phone-camera"></div>
+        <div class="mockup-phone-display pt-8 bg-base-100">
+          <iframe src="{{ src }}" class="w-full h-full bg-base-200" title="{{ label }}'s phone"></iframe>
+        </div>
+      </div>
+      <span class="badge">{{ label }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
