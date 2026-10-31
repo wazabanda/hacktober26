@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}TrackSplit · {{ "Not found" if status == 404 else "Something went wrong" }}{% endblock %}
+{% block body %}
+<div class="min-h-dvh ts-glow flex items-center justify-center p-4">
+  <div class="card bg-base-100 border border-base-300 shadow-xl shadow-base-content/5 w-full max-w-sm ts-in">
+    <div class="card-body items-center text-center gap-3">
+      <span class="text-5xl leading-none" aria-hidden="true">{{ "🧾" if status == 404 else "⚠️" }}</span>
+      <h1 class="text-2xl font-extrabold tracking-tight mt-2">{{ "We couldn't find that" if status == 404 else "Something went wrong" }}</h1>
+      <p class="text-sm text-base-content/65">
+        {% if status == 404 %}This link may be mistyped, or the bill was cleared when the app restarted.{% else %}{{ detail }}{% endif %}
+      </p>
+      <div class="w-full grid gap-2 mt-3">
+        <a class="btn btn-primary" href="/">{{ icon("arrow-left", "size-4") }} Go home</a>
+        <a class="btn btn-ghost btn-sm" href="/new">Split a new bill</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

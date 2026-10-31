@@ -11,12 +11,16 @@
       </div>
       {% if pay.status == "paid" %}
         <div class="alert alert-success w-full mt-2">{{ icon("circle-check") }}<span>Paid</span></div>
-        {% if back %}<a class="btn btn-ghost btn-sm" href="{{ back }}">{{ icon("arrow-left", "size-4") }} Back to the bill</a>{% endif %}
+        <div class="w-full grid gap-2">
+          {% if back %}<a class="btn btn-primary" href="{{ back }}">{{ icon("arrow-left", "size-4") }} Back to the bill</a>{% endif %}
+          {% if pay.receipt_id %}<a class="btn {{ 'btn-ghost btn-sm' if back else 'btn-primary' }}" href="/r/{{ pay.receipt_id }}">{{ icon("receipt", "size-4") }} View receipt</a>{% endif %}
+          {% if not back %}<a class="btn btn-ghost btn-sm text-base-content/60" href="/">Home</a>{% endif %}
+        </div>
       {% else %}
         <form method="post" action="/mock-pay/{{ pay.id }}?back={{ back | urlencode }}" class="w-full mt-2">
           <button class="btn btn-primary btn-lg btn-block shadow-lg shadow-primary/25">Pay ${{ pay.amount_usdc }}</button>
         </form>
-        {% if back %}<a class="btn btn-ghost btn-sm text-base-content/60" href="{{ back }}">Cancel</a>{% endif %}
+        <a class="btn btn-ghost btn-sm text-base-content/60" href="{{ back or '/' }}">Cancel</a>
       {% endif %}
     </div>
   </div>

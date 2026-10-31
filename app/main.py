@@ -14,11 +14,13 @@ load_dotenv()
 
 import qrcode
 from fastapi import Depends, FastAPI, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from sqlmodel import Session, select
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from . import devdraft, hub, llm, pdf
 from .db import (Business, Claim, Participant, Payment, Payout, Product, Receipt, ReceiptItem, Split, engine,
@@ -72,6 +74,15 @@ templates.env.globals["static_v"] = int((HERE / "static" / "app.js").stat().st_m
 
 def page(request: Request, name: str, **ctx):
     return templates.TemplateResponse(request, name, {"mode": devdraft.mode(), **ctx})
+
+
+@app.exception_handler(StarletteHTTPException)
+async def html_errors(request: Request, exc: StarletteHTTPException):
+    """Pages get a friendly error page with a way home; the API keeps its JSON errors."""
+    if request.method != "GET" or request.url.path.startswith(("/api/", "/static/", "/webhooks/")):
+        return await http_exception_handler(request, exc)
+    return templates.TemplateResponse(request, "error.html", {"mode": devdraft.mode(), "status": exc.status_code,
+                                                              "detail": exc.detail}, status_code=exc.status_code)
 
 
 def new_slug() -> str:
@@ -155,8 +166,10 @@ def receipt_page(request: Request, receipt_id: int, s: Session = Depends(get_ses
     names = {p.id: p.name for p in s.exec(select(Participant).where(
         Participant.id.in_([p.participant_id for p in pays if p.participant_id]))).all()}
     stock = {p.id: p for p in s.exec(select(Product)).all()} if r.source == "counter" else {}
+    split = s.exec(select(Split).where(Split.receipt_id == r.id)).first()
+    back = (f"/s/{split.slug}", "Back to the bill") if split else ("/shop", "Back to the shop") if r.source == "counter" else ("/", "Home")
     return page(request, "receipt.html", r=r, items=items, pays=pays, names=names, stock=stock,
-                url=f"{base_url(request)}/r/{r.id}")
+                url=f"{base_url(request)}/r/{r.id}", back=back)
 
 
 @app.get("/r/{receipt_id}/receipt.pdf")

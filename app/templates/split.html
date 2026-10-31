@@ -7,7 +7,7 @@
 
   <header class="sticky top-0 z-10 bg-base-200/80 backdrop-blur-md">
     <div class="px-4 h-14 flex items-center gap-3">
-      <span class="size-8 shrink-0 rounded-xl bg-primary text-primary-content grid place-items-center">{{ icon("receipt", "size-4") }}</span>
+      <a href="/" class="size-8 shrink-0 rounded-xl bg-primary text-primary-content grid place-items-center transition hover:scale-105" aria-label="TrackSplit home" title="Home">{{ icon("receipt", "size-4") }}</a>
       <div class="flex-1 min-w-0 font-extrabold tracking-tight truncate" x-text="s?.merchant || 'TrackSplit'"></div>
       <span x-show="mode === 'mock'" x-cloak class="badge badge-sm border-0 bg-warning/25 text-base-content/80">mock pay</span>
       <div x-show="meP" x-cloak class="avatar avatar-placeholder" :title="meP?.name">
@@ -169,6 +169,12 @@
       <div class="flex justify-between text-base-content/70"><span>Tax, service &amp; tip</span><span class="num" x-text="k(s?.extras)"></span></div>
       <div class="flex justify-between font-bold text-base border-t border-base-300 pt-2 mt-1"><span>Total</span><span class="num" x-text="k(s?.total)"></span></div>
     </div>
+
+    <nav class="flex items-center justify-center gap-1 pt-2 text-sm" aria-label="More">
+      <a class="btn btn-ghost btn-sm text-base-content/60" href="/">{{ icon("arrow-left", "size-4") }} Home</a>
+      <a class="btn btn-ghost btn-sm text-base-content/60" href="/new">{{ icon("plus", "size-4") }} New split</a>
+      <a x-show="s?.receipt_id && meP?.paid" x-cloak class="btn btn-ghost btn-sm text-base-content/60" :href="'/r/' + s?.receipt_id">{{ icon("receipt", "size-4") }} Receipt</a>
+    </nav>
   </section>
 
   <!-- floating share bar -->
@@ -194,7 +200,7 @@
       <template x-if="meP?.paid">
         <div class="flex items-center gap-1.5">
           <span class="text-success flex items-center gap-1 font-semibold text-sm mr-1">{{ icon("circle-check", "size-5") }} Paid</span>
-          <a class="btn btn-sm rounded-xl border-0 bg-white/10 text-neutral-content hover:bg-white/20 gap-1" :href="'/r/' + s.receipt_id" target="_blank">{{ icon("receipt", "size-4") }} Receipt</a>
+          <a class="btn btn-sm rounded-xl border-0 bg-white/10 text-neutral-content hover:bg-white/20 gap-1" :href="'/r/' + s.receipt_id">{{ icon("receipt", "size-4") }} Receipt</a>
           <a class="btn btn-sm btn-square rounded-xl border-0 bg-white/10 text-neutral-content hover:bg-white/20" :href="'/r/' + s.receipt_id + '/receipt.pdf'" target="_blank" aria-label="Receipt PDF">{{ icon("file-down", "size-4") }}</a>
         </div>
       </template>

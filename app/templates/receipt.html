@@ -30,6 +30,13 @@
 
 <div class="min-h-dvh ts-glow px-4 py-8" x-data="printer({{ 'true' if pays and pays | selectattr('status', 'equalto', 'paid') | list | length == pays | length else 'false' }})" x-init="run()">
   <div class="max-w-sm mx-auto">
+    <nav class="flex items-center justify-between -mt-4 mb-4 -mx-2">
+      <!-- go back through history when we came from inside the app (keeps the host/guest view), else to the right page -->
+      <a href="{{ back[0] }}" class="btn btn-ghost btn-sm gap-1"
+         onclick="if (document.referrer.startsWith(location.origin) && history.length > 1) { history.back(); return false; }">
+        {{ icon("arrow-left", "size-4") }} {{ back[1] }}</a>
+      <a href="/" class="btn btn-ghost btn-sm btn-square" aria-label="TrackSplit home" title="Home">{{ icon("receipt", "size-4") }}</a>
+    </nav>
 
     <!-- printer -->
     <div class="pr-body relative z-10 rounded-[1.75rem] px-5 pt-5 pb-4 text-white">

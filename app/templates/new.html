@@ -6,6 +6,8 @@
   <div class="flex items-center gap-2 -ml-2">
     <a href="/" class="btn btn-ghost btn-sm btn-square" aria-label="Back">{{ icon("arrow-left") }}</a>
     <h1 class="text-xl font-extrabold tracking-tight">Split a bill</h1>
+    <button x-show="items.length" x-cloak class="btn btn-ghost btn-sm ml-auto text-base-content/60"
+            @click="items = []; unreadable = []; error = ''; merchant = ''">Start over</button>
   </div>
 
   <div class="space-y-3 ts-in" x-show="!items.length && !loading">

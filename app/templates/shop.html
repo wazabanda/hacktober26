@@ -2,7 +2,7 @@
 {% block title %}TrackSplit · {{ biz.name }}{% endblock %}
 {% block body %}
 <script src="/static/app.js?v={{ static_v }}"></script>
-<div x-data="shop()" x-init="load()" class="drawer drawer-end">
+<div x-data="shop()" x-init="load()" class="drawer drawer-end" @keydown.escape.window="open = false">
   <input id="cart" type="checkbox" class="drawer-toggle" x-model="open">
   <div class="drawer-content max-w-md mx-auto px-4 pt-3 pb-28 space-y-4">
     <div class="flex items-center gap-2 -ml-2">
