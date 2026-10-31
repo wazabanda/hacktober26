@@ -163,13 +163,13 @@ def finish_if_done(s: Session, split: Split) -> None:
         commit_sale(s, receipt.id)
 
 
-async def mark_paid(payment_id: int) -> bool:
-    """Idempotent. Used by the webhook, the poller and the mock Pay button."""
+async def mark_paid(payment_id: int, method: str = "devdraft", payer_ref: str | None = None) -> bool:
+    """Idempotent. Used by the webhook, the poller and the mock checkout."""
     with Session(engine) as s:
         pay = s.get(Payment, payment_id)
         if not pay or pay.status == "paid":
             return False
-        pay.status, pay.paid_at = "paid", now()
+        pay.status, pay.paid_at, pay.method, pay.payer_ref = "paid", now(), method, payer_ref
         s.add(pay)
         s.commit()
         if not pay.split_id:  # shop sale: stock moves now

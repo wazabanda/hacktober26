@@ -96,6 +96,8 @@ class Payment(SQLModel, table=True):
     devdraft_link_id: str | None = None
     url: str | None = None
     status: str = "pending"  # pending | paid | failed | refunded | void
+    method: str | None = None  # devdraft | card | momo | wallet
+    payer_ref: str | None = None  # masked, e.g. "Visa ••4242" or "MTN 096•••123"; never full card numbers
     created_at: datetime = Field(default_factory=now)
     paid_at: datetime | None = None
 
@@ -112,6 +114,13 @@ engine = create_engine(os.getenv("DATABASE_URL", "sqlite:///tracksplit.db"), con
 
 def init_db():
     SQLModel.metadata.create_all(engine)
+    # ponytail: no migration tool; add columns that new code expects to an existing SQLite file
+    with engine.begin() as conn:
+        for table in SQLModel.metadata.sorted_tables:
+            have = {row[1] for row in conn.exec_driver_sql(f"PRAGMA table_info('{table.name}')")}
+            for col in table.columns:
+                if col.name not in have:
+                    conn.exec_driver_sql(f"ALTER TABLE '{table.name}' ADD COLUMN '{col.name}' {col.type.compile(engine.dialect)}")
 
 
 def get_session():

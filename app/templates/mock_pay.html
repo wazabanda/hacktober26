@@ -1,24 +1,152 @@
 {% extends "base.html" %}
+{% block title %}Pay {{ pay.amount_minor | k }} · demo checkout{% endblock %}
 {% block body %}
-<div class="min-h-dvh ts-glow flex items-center justify-center p-4">
+<script src="/static/app.js?v={{ static_v }}"></script>
+<div class="min-h-dvh ts-glow flex items-center justify-center p-4" x-data="checkout()">
   <div class="card bg-base-100 border border-base-300 shadow-xl shadow-base-content/5 w-full max-w-sm ts-in">
-    <div class="card-body items-center text-center gap-3">
-      <span class="badge badge-sm gap-1 border-0 bg-warning/25 text-base-content/80">{{ icon("lock", "size-3") }} DevDraft mock checkout</span>
-      <div class="mt-2">
-        <div class="text-xs font-semibold uppercase tracking-wide text-base-content/55">Amount due</div>
-        <div class="text-4xl font-extrabold tracking-tight num mt-1">${{ pay.amount_usdc }}</div>
-        <div class="text-sm text-base-content/60 num mt-0.5">USDC · {{ pay.amount_minor | k }}</div>
+    <div class="card-body gap-4">
+      <div class="flex justify-center">
+        <span class="badge badge-sm gap-1 border-0 bg-warning/25 text-base-content/80 whitespace-nowrap">{{ icon("lock", "size-3") }} DevDraft mock checkout · no real money</span>
       </div>
+      <div class="text-center">
+        <div class="text-xs font-semibold uppercase tracking-wide text-base-content/55">{{ merchant }}{% if who %} · {{ who }}'s share{% endif %}</div>
+        <div class="text-4xl font-extrabold tracking-tight num mt-1">{{ pay.amount_minor | k }}</div>
+        <div class="text-sm text-base-content/60 num mt-0.5">${{ pay.amount_usdc }} USDC</div>
+      </div>
+
       {% if pay.status == "paid" %}
-        <div class="alert alert-success w-full mt-2">{{ icon("circle-check") }}<span>Paid</span></div>
+        <div class="alert alert-success w-full">{{ icon("circle-check") }}<span>Paid{% if pay.payer_ref %} with {{ pay.payer_ref }}{% endif %}</span></div>
         {% if back %}<a class="btn btn-ghost btn-sm" href="{{ back }}">{{ icon("arrow-left", "size-4") }} Back to the bill</a>{% endif %}
       {% else %}
-        <form method="post" action="/mock-pay/{{ pay.id }}?back={{ back | urlencode }}" class="w-full mt-2">
-          <button class="btn btn-primary btn-lg btn-block shadow-lg shadow-primary/25">Pay ${{ pay.amount_usdc }}</button>
-        </form>
-        {% if back %}<a class="btn btn-ghost btn-sm text-base-content/60" href="{{ back }}">Cancel</a>{% endif %}
+
+      <template x-if="done">
+        <div class="flex flex-col items-center text-center gap-2 py-2 ts-pop">
+          <span class="text-success">{{ icon("circle-check", "size-16") }}</span>
+          <div class="text-xl font-extrabold tracking-tight">Payment successful</div>
+          <div class="text-sm text-base-content/60" x-text="'Paid with ' + ref"></div>
+          {% if back %}<a class="btn btn-primary btn-block mt-2 shadow-lg shadow-primary/25" href="{{ back }}">{{ icon("arrow-left", "size-4") }} Back to the bill</a>
+          {% else %}<div class="text-sm text-base-content/55 mt-2">You can close this page.</div>{% endif %}
+        </div>
+      </template>
+
+      <template x-if="!done">
+        <div class="flex flex-col gap-4">
+          <div role="tablist" class="tabs tabs-box tabs-sm grid grid-cols-3">
+            <button role="tab" class="tab gap-1" :class="tab === 'momo' && 'tab-active'" @click="tab = 'momo'; error = ''">{{ icon("smartphone", "size-4") }} Mobile</button>
+            <button role="tab" class="tab gap-1" :class="tab === 'card' && 'tab-active'" @click="tab = 'card'; error = ''">{{ icon("credit-card", "size-4") }} Card</button>
+            <button role="tab" class="tab gap-1" :class="tab === 'wallet' && 'tab-active'" @click="tab = 'wallet'; error = ''">{{ icon("wallet", "size-4") }} USDC</button>
+          </div>
+
+          <!-- mobile money -->
+          <form x-show="tab === 'momo'" class="flex flex-col gap-3" @submit.prevent="pay()">
+            <label class="flex flex-col gap-1">
+              <span class="text-sm font-medium">Mobile money number</span>
+              <label class="input w-full">
+                <span class="text-base-content/55">+260</span>
+                <input type="tel" inputmode="numeric" placeholder="96 123 4567" x-model="phone" maxlength="12" autocomplete="tel-national">
+              </label>
+              <span class="text-xs" :class="network() ? 'text-success' : 'text-base-content/55'" x-text="network() ? network() + ' detected' : 'MTN, Airtel or Zamtel'"></span>
+            </label>
+            <div x-show="stage === 'prompt'" class="alert alert-info alert-soft text-sm">
+              <span class="loading loading-ring loading-sm"></span>
+              <span>Check your phone and enter your PIN to approve <b class="num">{{ pay.amount_minor | k }}</b>.</span>
+            </div>
+            <button class="btn btn-primary btn-lg btn-block shadow-lg shadow-primary/25" :disabled="busy || !network()">
+              <span x-show="busy" class="loading loading-spinner loading-sm"></span>
+              <span x-text="busy ? 'Waiting for approval…' : 'Pay {{ pay.amount_minor | k }}'"></span>
+            </button>
+          </form>
+
+          <!-- card -->
+          <form x-show="tab === 'card'" class="flex flex-col gap-3" @submit.prevent="pay()">
+            <label class="flex flex-col gap-1">
+              <span class="text-sm font-medium">Card number</span>
+              <label class="input w-full">
+                {{ icon("credit-card", "size-4 text-base-content/55") }}
+                <input inputmode="numeric" autocomplete="off" placeholder="4242 4242 4242 4242" maxlength="23"
+                       :value="card" @input="card = fmtCard($event.target.value); $event.target.value = card">
+                <span class="text-xs text-base-content/55" x-text="brand()"></span>
+              </label>
+            </label>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="flex flex-col gap-1"><span class="text-sm font-medium">Expiry</span>
+                <input class="input" inputmode="numeric" placeholder="MM/YY" maxlength="5" autocomplete="off"
+                       :value="exp" @input="exp = fmtExp($event.target.value); $event.target.value = exp"></label>
+              <label class="flex flex-col gap-1"><span class="text-sm font-medium">CVC</span>
+                <input class="input" inputmode="numeric" placeholder="123" maxlength="4" autocomplete="off" x-model="cvc"></label>
+            </div>
+            <button class="btn btn-primary btn-lg btn-block shadow-lg shadow-primary/25" :disabled="busy || !cardOk()">
+              <span x-show="busy" class="loading loading-spinner loading-sm"></span>
+              <span x-text="busy ? 'Processing…' : 'Pay {{ pay.amount_minor | k }}'"></span>
+            </button>
+          </form>
+
+          <!-- USDC wallet -->
+          <div x-show="tab === 'wallet'" class="flex flex-col gap-3 items-center text-center">
+            <img src="/qr.png?data={{ ('usdc:tracksplit-demo?amount=' ~ pay.amount_usdc) | urlencode }}" alt="Demo USDC payment QR code" class="w-36 h-36 bg-white p-1.5 rounded-xl border border-base-300">
+            <div class="text-sm">Send <b class="num">${{ pay.amount_usdc }} USDC</b> from any wallet, then confirm.</div>
+            <button class="btn btn-primary btn-lg btn-block shadow-lg shadow-primary/25" :disabled="busy" @click="pay()">
+              <span x-show="busy" class="loading loading-spinner loading-sm"></span>
+              <span x-text="busy ? 'Confirming on-chain…' : 'I\'ve sent ${{ pay.amount_usdc }}'"></span>
+            </button>
+          </div>
+
+          <div class="alert alert-error alert-soft text-sm" x-show="error" x-cloak>{{ icon("circle-x", "size-4") }}<span x-text="error"></span></div>
+
+          <details class="text-xs text-base-content/55">
+            <summary class="cursor-pointer">Demo test numbers</summary>
+            <ul class="mt-1 space-y-0.5 list-disc pl-4">
+              <li>Any valid card works, e.g. 4242 4242 4242 4242. 4000 0000 0000 0002 is declined.</li>
+              <li>Any MTN (096/076), Airtel (097/077) or Zamtel (095/075) number works. A number ending 000 has no funds.</li>
+              <li>Card numbers, expiry and CVC never leave this page; only a masked reference (e.g. Visa ••4242) is saved.</li>
+            </ul>
+          </details>
+          {% if back %}<a class="btn btn-ghost btn-sm text-base-content/60" href="{{ back }}">Cancel</a>{% endif %}
+        </div>
+      </template>
       {% endif %}
     </div>
   </div>
 </div>
+
+<script>
+function checkout() {
+  return {
+    tab: 'momo', phone: '', card: '', exp: '', cvc: '', busy: false, stage: '', error: '', done: false, ref: '',
+    digits(v) { return (v || '').replace(/\D/g, ''); },
+    network() {
+      const d = this.digits(this.phone).replace(/^0/, '');
+      if (d.length !== 9 || !/^[79]/.test(d)) return '';
+      return { 6: 'MTN MoMo', 7: 'Airtel Money', 5: 'Zamtel Kwacha' }[d[1]] || '';
+    },
+    fmtCard(v) { return this.digits(v).slice(0, 19).replace(/(.{4})/g, '$1 ').trim(); },
+    fmtExp(v) { const d = this.digits(v).slice(0, 4); return d.length > 2 ? d.slice(0, 2) + '/' + d.slice(2) : d; },
+    brand() { const d = this.digits(this.card); return d[0] === '4' ? 'Visa' : /^5[1-5]|^2[2-7]/.test(d) ? 'Mastercard' : ''; },
+    luhn(d) {
+      let sum = 0;
+      for (let i = 0; i < d.length; i++) { let n = +d[d.length - 1 - i]; if (i % 2) { n *= 2; if (n > 9) n -= 9; } sum += n; }
+      return d.length >= 13 && sum % 10 === 0;
+    },
+    cardOk() {
+      const [m, y] = this.exp.split('/').map(Number);
+      return this.luhn(this.digits(this.card)) && m >= 1 && m <= 12 && y >= 0 && this.digits(this.cvc).length >= 3;
+    },
+    async pay() {
+      this.busy = true; this.error = '';
+      let ref = '${{ pay.amount_usdc }} USDC wallet';
+      if (this.tab === 'card') ref = (this.brand() || 'Card') + ' ••' + this.digits(this.card).slice(-4);
+      if (this.tab === 'momo') {
+        const d = this.digits(this.phone).replace(/^0/, '');
+        ref = this.network().split(' ')[0] + ' 0' + d.slice(0, 2) + '•••' + d.slice(-4);
+        this.stage = 'prompt';
+        await new Promise((r) => setTimeout(r, 1500));  // simulated USSD approval on the phone
+      }
+      try {
+        await post('/mock-pay/{{ pay.id }}', { method: this.tab, ref });
+        this.ref = ref; this.done = true;
+      } catch (e) { this.error = e.message; } finally { this.busy = false; this.stage = ''; }
+    },
+  };
+}
+</script>
 {% endblock %}

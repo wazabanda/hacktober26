@@ -82,7 +82,10 @@
           <template x-for="p in s?.participants || []" :key="p.id">
             <li class="flex items-center gap-3 py-2.5">
               <div class="avatar avatar-placeholder"><div class="w-8 rounded-full" :class="colorFor(p.id)"><span class="text-xs font-bold" x-text="initials(p.name)"></span></div></div>
-              <div class="flex-1 min-w-0 truncate"><span class="font-medium" x-text="p.name"></span> <span x-show="p.is_host" class="badge badge-ghost badge-xs ml-0.5">host</span></div>
+              <div class="flex-1 min-w-0">
+                <div class="truncate"><span class="font-medium" x-text="p.name"></span> <span x-show="p.is_host" class="badge badge-ghost badge-xs ml-0.5">host</span></div>
+                <div class="text-xs text-base-content/55 truncate" x-show="p.paid_with" x-text="p.paid_with"></div>
+              </div>
               <span class="num text-sm font-semibold" x-text="k(p.share)"></span>
               <span class="badge badge-sm w-[5.5rem] justify-center" :class="p.paid ? 'badge-success' : p.confirmed ? 'badge-info badge-soft' : 'badge-ghost'"
                     x-text="p.paid ? 'paid' : p.confirmed ? 'confirmed' : 'choosing'"></span>

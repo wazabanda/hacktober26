@@ -63,6 +63,7 @@ def build_state(s: Session, split: Split, viewer: int | None) -> SplitState:
         ps.append(ParticipantState(
             id=p.id, name=p.name, is_host=p.is_host, confirmed=p.confirmed, paid=is_paid(split, p, payments),
             share=share, share_usdc=str(pay.amount_usdc if pay else to_usdc(share)),
+            paid_with=pay.payer_ref if pay and pay.status == "paid" else None,
             pay_url=pay.url if (pay and p.id == viewer and pay.status == "pending") else None))
     payout = s.exec(select(Payout).where(Payout.split_id == split.id)).first()
     allocated = sum(p.share for p in ps)

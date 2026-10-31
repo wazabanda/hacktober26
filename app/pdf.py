@@ -54,7 +54,7 @@ def receipt_pdf(r, items, pays, names, url: str) -> bytes:
     totals += [(label, v) for label, v in (("Tax", r.tax_minor), ("Service", r.service_minor), ("Tip", r.tip_minor)) if v]
     totals.append(("TOTAL", r.total_minor))
     footer = [f"{names.get(p.participant_id, 'Customer')}: {kwacha(p.amount_minor)} / ${p.amount_usdc} USDC - {p.status}"
-              for p in pays]
+              + (f" ({p.payer_ref.replace('•', '*')})" if p.payer_ref else "") for p in pays]
     footer += ["", "Payments by DevDraft - TrackSplit"]
     return bill_pdf(r.merchant or "Receipt", [f"Receipt #{r.id}", r.created_at.strftime("%d %b %Y %H:%M UTC")],
                     [(i.qty, i.name, i.line_total_minor) for i in items], totals, footer, qr=url)
