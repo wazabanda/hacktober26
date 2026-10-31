@@ -3,7 +3,9 @@
 Snap a bill → share a link → everyone taps what they ordered → each person pays their exact share via DevDraft, live on every phone.
 Snap the shop counter → items matched to the product DB → stock tracked → receipt sent.
 
-Gemma 4 (vision) · Pydantic AI · FastAPI + WebSockets · daisyUI · DevDraft · DigitalOcean. MIT.
+Google Gemini (vision) · Pydantic AI · FastAPI + WebSockets · daisyUI · DevDraft · DigitalOcean. MIT.
+
+**Models:** we built and tested with DeepSeek and Gemma; the production API runs on Gemini (`gemini-2.5-flash`). Switching is one env var (`LLM_MODEL`), because Pydantic AI hides the provider.
 
 - Spec & architecture: [docs/TRACKSPLIT.md](docs/TRACKSPLIT.md)
 - Build prompt & step-by-step plan: [docs/BUILD_PROMPT.md](docs/BUILD_PROMPT.md)
@@ -30,11 +32,11 @@ Open:
 
 ### Minimum `.env`
 
-Payments run in mock mode by default, so you only need a model key for photo reading:
+Payments run in mock mode by default, so you only need a Gemini key for photo reading (free at https://aistudio.google.com/apikey):
 
 ```dotenv
-LLM_MODEL=deepseek:deepseek-chat   # or a Gemma 4 id like gemma-4-..., which uses GEMINI_API_KEY
-DEEPSEEK_API_KEY=...               # or GEMINI_API_KEY=... for Gemma / Gemini
+GEMINI_API_KEY=...
+LLM_MODEL=gemini-2.5-flash
 DEVDRAFT_MODE=mock
 PUBLIC_BASE_URL=                   # leave blank locally
 ```
@@ -89,8 +91,8 @@ You can also run `doctl apps create --spec .do/app.yaml`. The SQLite database is
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `LLM_MODEL` | none | Model that reads photos. A bare id (e.g. a Gemma 4 id) uses the Gemini API; `provider:model` (e.g. `deepseek:deepseek-chat`) uses that provider |
-| `GEMINI_API_KEY` / `DEEPSEEK_API_KEY` | none | Key for that provider |
+| `LLM_MODEL` | `gemini-2.5-flash` | Gemini model that reads photos. Any Gemini API id works (including Gemma 4 ids); `provider:model` (e.g. `deepseek:deepseek-chat`) switches provider |
+| `GEMINI_API_KEY` | none | Google AI Studio key. `DEEPSEEK_API_KEY` etc. only if you switch provider |
 | `DEVDRAFT_MODE` | `mock` | `mock` or `live` |
 | `DEVDRAFT_CLIENT_KEY`, `DEVDRAFT_CLIENT_SECRET`, `DEVDRAFT_WEBHOOK_SECRET` | none | Live DevDraft only. Webhook URL: `{PUBLIC_BASE_URL}/webhooks/devdraft` |
 | `PUBLIC_BASE_URL` | blank = the URL the page was opened on | Public app URL, used in share links and payment links |
